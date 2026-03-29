@@ -1,40 +1,78 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
-import ProfilePopup from '@/components/ProfilePopup'; 
+import ProfilePopup from '@/components/ProfilePopup';
 
 export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { label: 'Total Anggota', value: '0', change: '...', icon: 'group' },
+    { label: 'Anggota Aktif', value: '0', change: '...', icon: 'how_to_reg' },
+    { label: 'Anggota Istirahat', value: '0', change: '...', icon: 'bedtime' },
+    { label: 'Anggota Keluar', value: '0', change: '...', icon: 'person_remove' },
+  ]);
+  const [rantingData, setRantingData] = useState<any[]>([]);
 
-  // Data statis (sama seperti sebelumnya)
-  const stats = [
-    { label: 'Total Anggota', value: '1,248', change: '+12%', color: 'primary', icon: 'group' },
-    { label: 'Anggota Aktif', value: '1,012', change: 'Stabil', color: 'green', icon: 'how_to_reg' },
-    { label: 'Anggota Istirahat', value: '184', change: '-2%', color: 'amber', icon: 'bedtime' },
-    { label: 'Anggota Keluar', value: '52', change: '+1%', color: 'error', icon: 'person_remove' },
-  ];
+  useEffect(() => {
+    async function getDashboardData() {
+      try {
+        // 1. Ambil Data Anggota
+        const { data: anggota, error } = await supabase
+          .from('anggota')
+          .select('status_anggota, ranting');
 
-  const rantingData = [
-    { name: 'Kebumen Kota', anggota: 450, persen: 36 },
-    { name: 'Pejagoan', anggota: 312, persen: 25 },
-    { name: 'Sruweng', anggota: 286, persen: 23 },
-    { name: 'Kutowinangun', anggota: 200, persen: 16 },
-  ];
+        if (error) throw error;
 
-  const logs = [
-    { activity: 'Budi Santoso updated member data', time: '10 Menit yang lalu', icon: 'person_add', color: 'primary-container' },
-    { activity: 'New letter uploaded: SK-042/III/2024', time: '2 Jam yang lalu', icon: 'upload_file', color: 'tertiary' },
-    { activity: 'Ahmad Susilo changed status to Istirahat', time: 'Kemarin, 14:20', icon: 'edit_note', color: 'on-surface-variant' },
-    { activity: 'Ranting Pejagoan added 5 new members', time: '2 Hari yang lalu', icon: 'domain', color: 'secondary' },
-  ];
+        if (anggota) {
+          const total = anggota.length;
+          const aktif = anggota.filter(a => a.status_anggota === 'Aktif').length;
+          const istirahat = anggota.filter(a => a.status_anggota === 'Istirahat').length;
+          const keluar = anggota.filter(a => a.status_anggota === 'Keluar').length;
+
+          setStats([
+            { label: 'Total Anggota', value: total.toLocaleString(), change: 'Total', icon: 'group' },
+            { label: 'Anggota Aktif', value: aktif.toLocaleString(), change: 'Aktif', icon: 'how_to_reg' },
+            { label: 'Anggota Istirahat', value: istirahat.toLocaleString(), change: 'Rehat', icon: 'bedtime' },
+            { label: 'Anggota Keluar', value: keluar.toLocaleString(), change: 'Keluar', icon: 'person_remove' },
+          ]);
+
+          // 2. Hitung Distribusi Ranting secara dinamis
+          const counts = anggota.reduce((acc: any, curr) => {
+            const r = curr.ranting || 'Umum';
+            acc[r] = (acc[r] || 0) + 1;
+            return acc;
+          }, {});
+
+          const formattedRanting = Object.keys(counts).map(name => ({
+            name,
+            anggota: counts[name],
+            persen: Math.round((counts[name] / total) * 100)
+          })).sort((a, b) => b.anggota - a.anggota); // Urutkan dari terbanyak
+
+          setRantingData(formattedRanting);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    getDashboardData();
+  }, []);
+
+  // Tampilan loading sederhana
+  if (loading) return <div className="p-10 text-center font-bold">Menghubungkan ke Supabase...</div>;
 
   return (
     <div className="flex min-h-screen bg-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 md:ml-64 flex flex-col min-h-screen bg-surface pb-24">
-        {/* TopAppBar dengan hamburger menu */}
+        {/* Header tetap sama */}
         <header className="fixed top-0 right-0 left-0 md:left-64 z-40 bg-white/80 backdrop-blur-md flex justify-between items-center px-4 md:px-8 py-4 border-b border-slate-100">
           <div className="flex items-center gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-blue-900">
@@ -42,91 +80,53 @@ export default function DashboardPage() {
             </button>
             <h2 className="text-xl font-extrabold text-blue-900 tracking-tighter">Cabang Kebumen</h2>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-4">
-              <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">help_outline</span>
-              <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">info</span>
-            </div>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
-  <div className="text-right">
-    <p className="text-xs font-bold">Budi Santoso</p>
-    <p className="text-[10px] text-slate-500">Admin Cabang</p>
-  </div>
-  <ProfilePopup />
-</div>
+          <div className="flex items-center gap-3">
+             <div className="text-right">
+                <p className="text-xs font-bold">Admin Cabang</p>
+             </div>
+             <ProfilePopup />
           </div>
         </header>
 
         <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
-          <div className="mb-10">
-            <p className="text-tertiary font-medium mb-1">Selamat datang kembali,</p>
-            <h1 className="text-3xl font-extrabold text-primary tracking-tight">Dashboard Overview</h1>
-          </div>
+          <h1 className="text-3xl font-extrabold text-primary mb-10">Dashboard Overview</h1>
 
-          {/* Stat Cards */}
+          {/* Stat Cards Dinamis */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             {stats.map((stat, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-xl shadow flex flex-col gap-4 border-l-4 border-primary">
-                <div className="flex justify-between items-start">
+              <div key={idx} className="bg-white p-6 rounded-xl shadow border-l-4 border-primary">
+                <div className="flex justify-between items-start mb-4">
                   <div className="bg-primary/10 p-3 rounded-lg">
                     <span className="material-symbols-outlined text-3xl text-primary">{stat.icon}</span>
                   </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded bg-green-50 text-green-600">{stat.change}</span>
+                  <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 text-primary">{stat.change}</span>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
-                  <h3 className="text-2xl font-extrabold text-gray-800">{stat.value}</h3>
-                </div>
+                <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
+                <h3 className="text-2xl font-extrabold text-gray-800">{stat.value}</h3>
               </div>
             ))}
           </div>
 
-          {/* Distribusi & Log */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <section className="bg-gray-50 p-6 rounded-xl">
-                <h2 className="text-xl font-bold text-primary mb-4">Distribusi Per Ranting</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rantingData.map((item, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-lg flex justify-between items-center">
-                      <div>
-                        <p className="font-bold">{item.name}</p>
-                        <p className="text-sm text-gray-500">{item.anggota} Anggota</p>
-                      </div>
-                      <div className="w-12 h-12 rounded-full border-4 border-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">{item.persen}%</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <section className="bg-gray-50 p-6 rounded-xl">
+              <h2 className="text-xl font-bold text-primary mb-4">Distribusi Ranting Real-time</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {rantingData.map((item, idx) => (
+                  <div key={idx} className="bg-white p-4 rounded-lg flex justify-between items-center shadow-sm">
+                    <div>
+                      <p className="font-bold">{item.name}</p>
+                      <p className="text-sm text-gray-500">{item.anggota} Anggota</p>
                     </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="bg-white p-6 rounded-xl shadow-sm border">
-                <h2 className="text-xl font-bold text-primary mb-4">Manajemen Surat</h2>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div><p className="text-gray-500">Total Surat</p><p className="text-2xl font-bold">342</p></div>
-                  <div><p className="text-gray-500">Surat Masuk</p><p className="text-2xl font-bold text-green-600">128</p></div>
-                  <div><p className="text-gray-500">Surat Keluar</p><p className="text-2xl font-bold text-blue-400">214</p></div>
-                </div>
-              </section>
-            </div>
-
-            <div className="lg:col-span-1">
-              <section className="bg-gray-50 p-6 rounded-xl h-full">
-                <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2"><span className="material-symbols-outlined">history</span> Log Aktivitas</h2>
-                <div className="space-y-4">
-                  {logs.map((log, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"><span className="material-symbols-outlined text-sm text-blue-600">{log.icon}</span></div>
-                      <div><p className="text-sm font-semibold">{log.activity}</p><p className="text-xs text-gray-400">{log.time}</p></div>
+                    <div className="w-12 h-12 rounded-full border-4 border-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                      {item.persen}%
                     </div>
-                  ))}
-                </div>
-                <button className="w-full mt-6 py-2 bg-white border rounded-lg text-sm font-bold text-primary">LIHAT SEMUA LOG</button>
-              </section>
-            </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
-
-<Footer />
+        <Footer />
       </main>
     </div>
   );
