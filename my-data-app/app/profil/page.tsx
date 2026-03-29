@@ -86,13 +86,13 @@ export default function ProfilAnggotaPage() {
 
         <main className="p-6 lg:p-10 max-w-7xl mx-auto w-full flex-1 screen-only">
           {/* HEADER SECTION */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-            <div className="space-y-1">
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 uppercase italic tracking-tighter">Detail Data</h1>
-              <p className="text-slate-400 font-bold flex items-center gap-2 text-sm uppercase">
-                <ShieldCheck size={16} className="text-blue-500" /> Database ISBDS Cipta Sejati
-              </p>
-            </div>
+<div className="pt-24 px-4 md:px-8 pb-12 flex-1">
+          <div className="mb-10">
+            
+            <h1 className="text-3xl font-extrabold text-primary tracking-tight">Profil Anggota</h1>
+<p className="text-tertiary font-medium mb-1">Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati</p>
+          </div>
+
             
             {data && (
               <div className="flex gap-2">
