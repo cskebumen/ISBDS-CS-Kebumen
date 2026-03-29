@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
+import Footer from '@/components/Footer';
+import ProfilePopup from '@/components/ProfilePopup'; 
 
 export default function DashboardPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen bg-surface">
+      <main className="flex-1 md:ml-64 flex flex-col min-h-screen bg-surface pb-24">
         {/* TopAppBar dengan hamburger menu */}
         <header className="fixed top-0 right-0 left-0 md:left-64 z-40 bg-white/80 backdrop-blur-md flex justify-between items-center px-4 md:px-8 py-4 border-b border-slate-100">
           <div className="flex items-center gap-4">
@@ -45,7 +47,13 @@ export default function DashboardPage() {
               <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">help_outline</span>
               <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">info</span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center text-white text-xs">BS</div>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+  <div className="text-right">
+    <p className="text-xs font-bold">Budi Santoso</p>
+    <p className="text-[10px] text-slate-500">Admin Cabang</p>
+  </div>
+  <ProfilePopup />
+</div>
           </div>
         </header>
 
@@ -118,8 +126,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <footer className="w-full py-4 bg-gray-50 text-center text-xs text-gray-500">© 2024 ISBDS Cipta Sejati Cabang Kebumen</footer>
-        <button className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center"><span className="material-symbols-outlined text-3xl">add</span></button>
+<Footer />
       </main>
     </div>
   );
