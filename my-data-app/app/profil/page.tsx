@@ -15,7 +15,7 @@ import ProfilePopup from '@/components/ProfilePopup';
 import { CetakProfil } from '@/components/CetakProfil';
 import { supabase } from '@/lib/supabaseClient';
 
-export default function ProfilAnggota() {
+export default function ProfilAnggotaPage() {
   const componentRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<any>(null);
   const [riwayat, setRiwayat] = useState<any[]>([]);
@@ -24,6 +24,7 @@ export default function ProfilAnggota() {
   
   // State untuk Hamburger Menu Mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const [loading, setLoading] = useState(true);
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
