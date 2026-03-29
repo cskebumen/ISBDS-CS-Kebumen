@@ -67,7 +67,7 @@ export default function LoginPage() {
                   <img
                     src="/images/isbds.png"
                     alt="Logo ISBDS"
-                    className="w-10 h-10 md:w-14 md:h-14 object-contain grayscale brightness-50"
+                    className="w-10 h-10 md:w-14 md:h-14 object-contain brightness-50"
                   />
                 </div>
                 <h2 className="font-headline text-xl md:text-2xl font-bold text-on-surface tracking-tight">Selamat Datang</h2>
