@@ -21,7 +21,7 @@ type Anggota = {
   tempat_lahir: string;
   tanggal_lahir: string;
   jenis_kelamin: string;
-  alamat: string;
+  alamat_lengkap: string; // Perbaikan nama kolom sesuai skema database
   no_hp: string;
   status_anggota: string;
   foto_url?: string;
@@ -38,10 +38,17 @@ export default function DataIndukPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingAnggota, setEditingAnggota] = useState<Anggota | null>(null);
 
+  // List Dropdown Sabuk
+  const listSabuk = [
+    'Kuning', 'Hijau', 'Biru', 'Cokelat', 
+    'Hitam 1', 'Hitam 2', 'Hitam 3', 'Hitam 4',
+    'Merah 1', 'Merah 2', 'Merah 3', 'Merah 4'
+  ];
+
   // Form State
   const [formData, setFormData] = useState<Partial<Anggota>>({
     nama: '', ranting: '', cabang: 'Kebumen', tempat_lahir: '', tanggal_lahir: '', 
-    jenis_kelamin: 'Laki-laki', alamat: '', no_hp: '', status_anggota: 'Aktif'
+    jenis_kelamin: 'Laki-laki', alamat_lengkap: '', no_hp: '', status_anggota: 'Aktif'
   });
   const [riwayatFields, setRiwayatFields] = useState<RiwayatSabuk[]>([{ tingkat: '', no_sertifikat: '', tahun: '' }]);
 
@@ -55,7 +62,11 @@ export default function DataIndukPage() {
   useEffect(() => { fetchAnggota(); }, []);
 
   const generateNextNIA = async () => {
-    const { data } = await supabase.from('anggota').select('nia').like('nia', '03.06.02.%').order('nia', { ascending: false }).limit(1);
+    const { data } = await supabase.from('anggota')
+      .select('nia')
+      .like('nia', '03.06.02.%')
+      .order('nia', { ascending: false })
+      .limit(1);
     const prefix = "03.06.02.";
     if (data && data.length > 0) {
       const lastNum = parseInt(data[0].nia.split('.').pop() || '0');
@@ -84,12 +95,15 @@ export default function DataIndukPage() {
     } finally { setIsSaving(false); }
   };
 
-  // Riwayat Handlers
   const addRiwayat = () => setRiwayatFields([...riwayatFields, { tingkat: '', no_sertifikat: '', tahun: '' }]);
   const updateRiwayat = (idx: number, field: keyof RiwayatSabuk, val: string) => {
     const updated = [...riwayatFields];
     updated[idx][field] = val;
     setRiwayatFields(updated);
+  };
+
+  const removeRiwayat = (idx: number) => {
+    setRiwayatFields(riwayatFields.filter((_, i) => i !== idx));
   };
 
   return (
@@ -105,11 +119,11 @@ export default function DataIndukPage() {
         </header>
 
         <div className="pt-20 px-4 md:px-8 pb-12 flex-1">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-extrabold text-primary">Data Induk</h2>
+          <div className="flex justify-between items-center mb-6 text-primary">
+            <h2 className="text-2xl font-extrabold">Data Induk</h2>
             <button onClick={() => { 
               setEditingAnggota(null); 
-              setFormData({ nama: '', ranting: '', cabang: 'Kebumen', tempat_lahir: '', tanggal_lahir: '', jenis_kelamin: 'Laki-laki', alamat: '', no_hp: '', status_anggota: 'Aktif' });
+              setFormData({ nama: '', ranting: '', cabang: 'Kebumen', tempat_lahir: '', tanggal_lahir: '', jenis_kelamin: 'Laki-laki', alamat_lengkap: '', no_hp: '', status_anggota: 'Aktif' });
               setRiwayatFields([{ tingkat: '', no_sertifikat: '', tahun: '' }]);
               setShowTambahModal(true); 
             }} className="px-5 py-2.5 bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg">Tambah Anggota</button>
@@ -149,14 +163,13 @@ export default function DataIndukPage() {
 
       {showTambahModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl">
+          <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col">
             <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-20">
               <h3 className="font-black text-primary uppercase">Formulir Anggota</h3>
               <button onClick={() => setShowTambahModal(false)} className="p-2 rounded-full hover:bg-slate-100"><span className="material-symbols-outlined">close</span></button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Bagian Foto */}
+            <form onSubmit={handleSave} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-full aspect-[3/4] rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center relative overflow-hidden">
                     <span className="material-symbols-outlined text-4xl text-slate-400">add_a_photo</span>
@@ -168,24 +181,26 @@ export default function DataIndukPage() {
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Nama Lengkap</label>
-                    <input required value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" />
+                    <input required value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Tempat Lahir</label>
-                    <input value={formData.tempat_lahir} onChange={e => setFormData({...formData, tempat_lahir: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" />
+                    <input value={formData.tempat_lahir} onChange={e => setFormData({...formData, tempat_lahir: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Tanggal Lahir</label>
-                    <input type="date" value={formData.tanggal_lahir} onChange={e => setFormData({...formData, tanggal_lahir: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" />
+                    <input type="date" value={formData.tanggal_lahir} onChange={e => setFormData({...formData, tanggal_lahir: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase">WhatsApp</label>
-                    <input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" />
+                    <input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" placeholder="08xxx" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Status</label>
-                    <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm">
-                      <option value="Aktif">Aktif</option><option value="Istirahat">Istirahat</option><option value="Keluar">Keluar</option>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Status Keanggotaan</label>
+                    <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm">
+                      <option value="Aktif">Aktif</option>
+                      <option value="Istirahat">Istirahat</option>
+                      <option value="Keluar">Keluar</option>
                     </select>
                   </div>
                 </div>
@@ -193,16 +208,16 @@ export default function DataIndukPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat</label>
-                  <textarea value={formData.alamat} onChange={e => setFormData({...formData, alamat: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" rows={2} />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
+                  <textarea value={formData.alamat_lengkap} onChange={e => setFormData({...formData, alamat_lengkap: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" rows={2} />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Ranting</label>
-                  <input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 rounded-xl px-4 py-3 text-sm" />
+                  <input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Cabang</label>
-                  <input value={formData.cabang} disabled className="w-full bg-slate-200 rounded-xl px-4 py-3 text-sm" />
+                  <input value={formData.cabang} disabled className="w-full bg-slate-200 border-none rounded-xl px-4 py-3 text-sm text-slate-500" />
                 </div>
               </div>
 
@@ -210,20 +225,41 @@ export default function DataIndukPage() {
               <div className="border-t pt-6">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold text-sm text-primary uppercase">Riwayat Sabuk</h4>
-                  <button type="button" onClick={addRiwayat} className="text-xs font-bold text-blue-600">+ TAMBAH</button>
+                  <button type="button" onClick={addRiwayat} className="text-xs font-bold text-blue-600 hover:underline">+ TAMBAH</button>
                 </div>
                 {riwayatFields.map((field, idx) => (
-                  <div key={idx} className="grid grid-cols-3 gap-2 mb-3">
-                    <input placeholder="Tingkat" value={field.tingkat} onChange={e => updateRiwayat(idx, 'tingkat', e.target.value)} className="bg-slate-50 rounded-lg px-3 py-2 text-xs" />
-                    <input placeholder="No Sertifikat" value={field.no_sertifikat} onChange={e => updateRiwayat(idx, 'no_sertifikat', e.target.value)} className="bg-slate-50 rounded-lg px-3 py-2 text-xs" />
-                    <input placeholder="Tahun" value={field.tahun} onChange={e => updateRiwayat(idx, 'tahun', e.target.value)} className="bg-slate-50 rounded-lg px-3 py-2 text-xs" />
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3 items-end bg-slate-50 p-3 rounded-xl">
+                    <div className="md:col-span-4">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Tingkat Sabuk</label>
+                      <select 
+                        value={field.tingkat} 
+                        onChange={e => updateRiwayat(idx, 'tingkat', e.target.value)} 
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs"
+                      >
+                        <option value="">Pilih Sabuk</option>
+                        {listSabuk.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="md:col-span-5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">No Sertifikat</label>
+                      <input placeholder="Contoh: 123/SERT/2026" value={field.no_sertifikat} onChange={e => updateRiwayat(idx, 'no_sertifikat', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Tahun</label>
+                      <input placeholder="2026" value={field.tahun} onChange={e => updateRiwayat(idx, 'tahun', e.target.value)} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs" />
+                    </div>
+                    <div className="md:col-span-1 flex justify-center">
+                      <button type="button" onClick={() => removeRiwayat(idx)} className="text-red-500 hover:bg-red-50 p-1 rounded">
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
 
               <div className="flex gap-3 sticky bottom-0 bg-white pt-4">
-                <button type="button" onClick={() => setShowTambahModal(false)} className="flex-1 py-3 bg-slate-100 rounded-xl font-bold">BATAL</button>
-                <button type="submit" disabled={isSaving} className="flex-[2] py-3 bg-primary text-white rounded-xl font-bold shadow-lg">
+                <button type="button" onClick={() => setShowTambahModal(false)} className="flex-1 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">BATAL</button>
+                <button type="submit" disabled={isSaving} className="flex-[2] py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:opacity-90 transition-opacity">
                   {isSaving ? 'MEMPROSES...' : 'SIMPAN DATA'}
                 </button>
               </div>
