@@ -35,19 +35,10 @@ export default function DataIndukPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [anggota, setAnggota] = useState<Anggota[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Modals
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  
   const [isSaving, setIsSaving] = useState(false);
   const [editingAnggota, setEditingAnggota] = useState<Anggota | null>(null);
-
-  const listSabuk = [
-    'Kuning', 'Hijau', 'Biru', 'Cokelat', 
-    'Hitam 1', 'Hitam 2', 'Hitam 3', 'Hitam 4',
-    'Merah 1', 'Merah 2', 'Merah 3', 'Merah 4'
-  ];
 
   const [formData, setFormData] = useState<Partial<Anggota>>({
     nama_lengkap: '', ranting: '', cabang: 'Kebumen', tempat_lahir: '', tanggal_lahir: '', 
@@ -65,75 +56,6 @@ export default function DataIndukPage() {
     setLoading(false);
   };
 
-  // --- Fitur Excel (Export/Import/Template) ---
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(anggota.map(a => ({
-      NIA: a.nia, 'Nama Lengkap': a.nama_lengkap, Ranting: a.ranting, Cabang: a.cabang, Status: a.status_anggota, 'No HP': a.no_hp
-    })));
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Induk');
-    XLSX.writeFile(workbook, `data_induk_isbds_${new Date().toISOString().slice(0,10)}.xlsx`);
-  };
-
-  const downloadTemplate = () => {
-    const template = [{
-      NIA: '03.06.02.XXXXXX', 'Nama Lengkap': 'Nama Anggota', Ranting: 'Kebumen', 'Tempat Lahir': 'Kebumen', 'Tanggal Lahir': '1990-01-01', 'Jenis Kelamin': 'Laki-laki', 'Alamat Lengkap': 'Alamat...', 'No HP': '0812...', 'Status Anggota': 'Aktif'
-    }];
-    const ws = XLSX.utils.json_to_sheet(template);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-    XLSX.writeFile(wb, 'template_import_isbds.xlsx');
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const bstr = evt.target?.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const data: any[] = XLSX.utils.sheet_to_json(ws);
-      
-      const formattedData = data.map(row => ({
-        nia: row.NIA || '',
-        nama_lengkap: row['Nama Lengkap'] || '',
-        ranting: row.Ranting || '',
-        cabang: 'Kebumen',
-        status_anggota: row['Status Anggota'] || 'Aktif',
-        no_hp: row['No HP'] || ''
-      }));
-
-      const { error } = await supabase.from('anggota').insert(formattedData);
-      if (error) alert("Gagal import: " + error.message);
-      else {
-        alert(`Berhasil import ${data.length} data`);
-        fetchAnggota();
-      }
-      setShowImportModal(false);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  // --- CRUD Logic ---
-  const generateNextNIA = async () => {
-    const { data } = await supabase.from('anggota').select('nia').like('nia', '03.06.02.%').order('nia', { ascending: false }).limit(1);
-    const prefix = "03.06.02.";
-    if (data && data.length > 0) {
-      const lastNum = parseInt(data[0].nia.split('.').pop() || '0');
-      return prefix + (lastNum + 1).toString().padStart(6, '0');
-    }
-    return prefix + "000001";
-  };
-
-  const handleDelete = async (id: string, nama: string) => {
-    if (confirm(`Hapus data ${nama}?`)) {
-      await supabase.from('riwayat_sabuk').delete().eq('anggota_id', id);
-      const { error } = await supabase.from('anggota').delete().eq('id', id);
-      if (!error) fetchAnggota();
-    }
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -142,10 +64,17 @@ export default function DataIndukPage() {
       if (editingAnggota) {
         await supabase.from('anggota').update(formData).eq('id', anggotaId);
       } else {
-        const newNia = await generateNextNIA();
-        const { data } = await supabase.from('anggota').insert([{ ...formData, nia: newNia }]).select().single();
+        const { data: lastData } = await supabase.from('anggota').select('nia').like('nia', '03.06.02.%').order('nia', { ascending: false }).limit(1);
+        let newNia = "03.06.02.000001";
+        if (lastData && lastData.length > 0) {
+          const lastNum = parseInt(lastData[0].nia.split('.').pop() || '0');
+          newNia = `03.06.02.${(lastNum + 1).toString().padStart(6, '0')}`;
+        }
+        const { data, error: insErr } = await supabase.from('anggota').insert([{ ...formData, nia: newNia }]).select().single();
+        if (insErr) throw insErr;
         anggotaId = data.id;
       }
+
       if (anggotaId) {
         await supabase.from('riwayat_sabuk').delete().eq('anggota_id', anggotaId);
         const riwayatData = riwayatFields.filter(r => r.tingkat !== '').map(r => ({
@@ -156,75 +85,57 @@ export default function DataIndukPage() {
       setShowTambahModal(false);
       fetchAnggota();
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert("Gagal menyimpan: " + err.message);
     } finally { setIsSaving(false); }
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-poppins">
+    <div className="flex min-h-screen bg-slate-50 font-poppins text-slate-900">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <main className="flex-1 md:ml-64 min-h-screen flex flex-col pb-20">
-        {/* Header */}
         <header className="fixed top-0 right-0 left-0 md:left-64 z-40 bg-white/90 backdrop-blur-md flex justify-between items-center px-4 py-2 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-600">
-                <span className="material-symbols-outlined">menu</span>
-            </button>
-            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="bg-slate-100 rounded-full pl-4 pr-4 py-1.5 text-[11px] w-40 outline-none border border-transparent focus:border-primary/30" placeholder="Cari nama..." />
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2"><span className="material-symbols-outlined">menu</span></button>
+            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="bg-slate-100 rounded-full pl-4 pr-4 py-1.5 text-[11px] w-40 outline-none border focus:border-blue-400" placeholder="Cari..." />
           </div>
           <ProfilePopup />
         </header>
 
         <div className="pt-16 px-4 flex-1">
-          {/* Action Bar */}
           <div className="flex justify-between items-center my-4">
-            <div>
-                <h2 className="text-lg font-black text-primary uppercase leading-tight">Data Induk</h2>
-                <p className="text-[10px] text-slate-400 hidden md:block">Kelola basis data anggota organisasi</p>
-            </div>
-            <div className="flex gap-1.5">
-              <button onClick={exportToExcel} className="p-2 bg-green-50 text-green-600 rounded-lg border border-green-200"><span className="material-symbols-outlined text-sm">download</span></button>
-              <button onClick={() => setShowImportModal(true)} className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200"><span className="material-symbols-outlined text-sm">upload_file</span></button>
-              <button onClick={() => { setEditingAnggota(null); setShowTambahModal(true); }} className="px-3 py-2 bg-blue-700 text-white rounded-xl font-bold text-[10px] shadow-md">+ ANGGOTA</button>
-            </div>
+            <h2 className="text-lg font-black text-primary uppercase">Data Induk</h2>
+            <button onClick={() => { setEditingAnggota(null); setFormData({nama_lengkap:'', ranting:'', cabang:'Kebumen', jenis_kelamin:'Laki-laki', status_anggota:'Aktif'}); setRiwayatFields([{tingkat:'', no_sertifikat:'', tahun:''}]); setShowTambahModal(true); }} className="px-4 py-2 bg-blue-700 text-white rounded-xl font-bold text-[10px] shadow-md">+ ANGGOTA</button>
           </div>
 
-          {/* Table Container - Mobile Optimized */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-100">
+              <thead className="bg-slate-50 border-b">
                 <tr>
                   <th className="px-3 py-3 text-[10px] font-bold text-slate-500 uppercase">Info Anggota</th>
-                  <th className="px-3 py-3 text-[10px] font-bold text-slate-500 uppercase text-center w-28">Aksi</th>
+                  <th className="px-3 py-3 text-[10px] font-bold text-slate-500 uppercase text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {loading ? (
-                    <tr><td colSpan={2} className="py-10 text-center text-[11px] text-slate-400">Memuat basis data...</td></tr>
+                    <tr><td colSpan={2} className="py-10 text-center text-[11px] text-slate-400">Memuat...</td></tr>
                 ) : anggota.filter(a => a.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
-                  <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={item.id}>
                     <td className="px-3 py-3">
                       <div className="flex flex-col">
-                        <span className="text-[11px] font-bold text-slate-800 uppercase line-clamp-1">{item.nama_lengkap}</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono text-slate-400">{item.nia}</span>
-                            <span className="text-[9px] text-blue-600 font-bold bg-blue-50 px-1 rounded">{item.ranting}</span>
-                        </div>
+                        <span className="text-[11px] font-bold uppercase">{item.nama_lengkap}</span>
+                        <span className="text-[9px] text-slate-400">{item.nia} | <span className="text-blue-600 font-bold">{item.ranting}</span></span>
                       </div>
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="flex justify-center items-center gap-1.5">
-                        <Link href={`/profil/${item.nia}`} className="p-1 text-blue-500 bg-blue-50 rounded-md"><span className="material-symbols-outlined text-[18px]">visibility</span></Link>
+                    <td className="px-3 py-3 flex justify-center gap-2">
+                        <Link href={`/profil/${item.nia}`} className="p-1 text-blue-500"><span className="material-symbols-outlined text-[20px]">visibility</span></Link>
                         <button onClick={async () => { 
                             setEditingAnggota(item); 
                             setFormData(item); 
                             const { data } = await supabase.from('riwayat_sabuk').select('*').eq('anggota_id', item.id); 
                             setRiwayatFields(data && data.length > 0 ? data : [{ tingkat: '', no_sertifikat: '', tahun: '' }]); 
                             setShowTambahModal(true); 
-                        }} className="p-1 text-amber-500 bg-amber-50 rounded-md"><span className="material-symbols-outlined text-[18px]">edit</span></button>
-                        <button onClick={() => handleDelete(item.id!, item.nama_lengkap)} className="p-1 text-red-500 bg-red-50 rounded-md"><span className="material-symbols-outlined text-[18px]">delete</span></button>
-                      </div>
+                        }} className="p-1 text-amber-500"><span className="material-symbols-outlined text-[20px]">edit</span></button>
                     </td>
                   </tr>
                 ))}
@@ -235,82 +146,107 @@ export default function DataIndukPage() {
         <Footer />
       </main>
 
-      {/* Modal Form Tambah/Edit */}
+      {/* Modal Form - KEMBALI LENGKAP */}
       {showTambahModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-3">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl">
+          <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl">
             <div className="p-5 border-b flex justify-between items-center sticky top-0 bg-white z-20">
-              <h3 className="font-black text-primary uppercase text-[11px]">{editingAnggota ? 'Edit Data' : 'Tambah Anggota'}</h3>
-              <button onClick={() => setShowTambahModal(false)} className="material-symbols-outlined text-xl text-slate-400">close</button>
+              <h3 className="font-black text-primary uppercase text-[12px]">{editingAnggota ? 'Edit Anggota' : 'Tambah Anggota'}</h3>
+              <button onClick={() => setShowTambahModal(false)} className="material-symbols-outlined text-slate-400">close</button>
             </div>
-            <form onSubmit={handleSave} className="p-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Nama Lengkap</label>
-                  <input required value={formData.nama_lengkap} onChange={e => setFormData({...formData, nama_lengkap: e.target.value})} className="w-full bg-slate-50 rounded-lg px-3 py-2.5 text-xs outline-none border focus:border-blue-400 transition-all" />
+            
+            <form onSubmit={handleSave} className="p-5 space-y-6">
+              
+              {/* SECTION 1: FOTO & IDENTITAS UTAMA */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Upload Foto */}
+                <div className="md:col-span-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Foto Anggota</label>
+                  <div className="aspect-[3/4] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-3xl">add_a_photo</span>
+                    <p className="text-[9px] mt-1 font-bold">UPLOAD</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Ranting</label>
-                  <input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 rounded-lg px-3 py-2.5 text-xs outline-none border transition-all" />
-                </div>
-                <div>
-                    <label className="text-[9px] font-bold text-slate-400 uppercase">WA / No HP</label>
-                    <input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 rounded-lg px-3 py-2.5 text-xs outline-none border" placeholder="08..." />
-                </div>
-                <div>
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Cabang</label>
-                  <input value={formData.cabang} disabled className="w-full bg-slate-100 rounded-lg px-3 py-2.5 text-xs text-slate-400 border border-slate-200" />
+
+                {/* Input Data Diri */}
+                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Nama Lengkap</label>
+                    <input required value={formData.nama_lengkap} onChange={e => setFormData({...formData, nama_lengkap: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs focus:border-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Tempat Lahir</label>
+                    <input value={formData.tempat_lahir} onChange={e => setFormData({...formData, tempat_lahir: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs focus:border-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Tanggal Lahir</label>
+                    <input type="date" value={formData.tanggal_lahir} onChange={e => setFormData({...formData, tanggal_lahir: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs focus:border-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Jenis Kelamin</label>
+                    <select value={formData.jenis_kelamin} onChange={e => setFormData({...formData, jenis_kelamin: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none">
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">WhatsApp / No HP</label>
+                    <input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none" />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
-                <textarea value={formData.alamat_lengkap} onChange={e => setFormData({...formData, alamat_lengkap: e.target.value})} className="w-full bg-slate-50 rounded-lg px-3 py-2.5 text-xs outline-none border" rows={2} />
+              {/* SECTION 2: ALAMAT & ORGANISASI */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
+                  <textarea value={formData.alamat_lengkap} onChange={e => setFormData({...formData, alamat_lengkap: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none" rows={2} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Ranting</label>
+                  <input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Status Keanggotaan</label>
+                  <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs outline-none">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Cuti">Cuti</option>
+                    <option value="Mangkir">Mangkir</option>
+                    <option value="Alumni">Alumni</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Cabang</label>
+                  <input value="Kebumen" disabled className="w-full bg-slate-200 border rounded-xl px-3 py-2 text-xs text-slate-500" />
+                </div>
               </div>
 
-              <div className="pt-4 border-t">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-bold text-[10px] text-primary uppercase">Riwayat Sabuk</h4>
+              {/* SECTION 3: RIWAYAT SABUK */}
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-black text-primary text-[10px] uppercase">Riwayat Sabuk</h4>
                   <button type="button" onClick={() => setRiwayatFields([...riwayatFields, { tingkat: '', no_sertifikat: '', tahun: '' }])} className="text-[9px] font-bold text-blue-600">+ TAMBAH BARIS</button>
                 </div>
                 {riwayatFields.map((field, idx) => (
-                  <div key={idx} className="flex gap-2 mb-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                    <select value={field.tingkat} onChange={e => { const u = [...riwayatFields]; u[idx].tingkat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px]">
+                  <div key={idx} className="flex gap-2 mb-2">
+                    <select value={field.tingkat} onChange={e => { const u = [...riwayatFields]; u[idx].tingkat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-slate-50 border rounded-lg px-2 py-2 text-[10px]">
                       <option value="">Pilih Sabuk</option>
-                      {listSabuk.map(s => <option key={s} value={s}>{s}</option>)}
+                      {['Kuning','Hijau','Biru','Cokelat','Hitam'].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <input placeholder="No Sert" value={field.no_sertifikat} onChange={e => { const u = [...riwayatFields]; u[idx].no_sertifikat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px]" />
-                    <input type="number" placeholder="Tahun" value={field.tahun} onChange={e => { const u = [...riwayatFields]; u[idx].tahun = e.target.value; setRiwayatFields(u); }} className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px]" />
-                    <button type="button" onClick={() => setRiwayatFields(riwayatFields.filter((_, i) => i !== idx))} className="text-red-500 material-symbols-outlined text-[18px]">close</button>
+                    <input placeholder="No Sert" value={field.no_sertifikat} onChange={e => { const u = [...riwayatFields]; u[idx].no_sertifikat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-slate-50 border rounded-lg px-2 py-2 text-[10px]" />
+                    <input placeholder="Tahun" value={field.tahun} onChange={e => { const u = [...riwayatFields]; u[idx].tahun = e.target.value; setRiwayatFields(u); }} className="w-16 bg-slate-50 border rounded-lg px-2 py-2 text-[10px]" />
+                    <button type="button" onClick={() => setRiwayatFields(riwayatFields.filter((_, i) => i !== idx))} className="text-red-500 material-symbols-outlined">delete</button>
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-2 pt-4">
-                <button type="button" onClick={() => setShowTambahModal(false)} className="flex-1 py-3 bg-slate-100 rounded-xl font-bold text-[10px] text-slate-500 uppercase">Batal</button>
-                <button type="submit" disabled={isSaving} className="flex-[2] py-3 bg-primary text-white rounded-xl font-bold text-[10px] shadow-lg active:scale-95 transition-all uppercase">
-                  {isSaving ? 'Memproses...' : 'Simpan Data'}
+              <div className="flex gap-3 pt-6">
+                <button type="button" onClick={() => setShowTambahModal(false)} className="flex-1 py-3 bg-slate-100 rounded-xl font-bold text-[10px] uppercase">Batal</button>
+                <button type="submit" disabled={isSaving} className="flex-[2] py-3 bg-primary text-white rounded-xl font-bold text-[10px] uppercase shadow-lg active:scale-95 transition-all">
+                  {isSaving ? 'MEMPROSES...' : 'SIMPAN DATA'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Import */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
-            <h3 className="font-black text-primary text-sm uppercase mb-4">Import Data Excel</h3>
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => document.getElementById('fileImport')?.click()}>
-                <span className="material-symbols-outlined text-4xl text-slate-300">cloud_upload</span>
-                <p className="text-[11px] font-bold text-slate-500 mt-2">Klik untuk Pilih File</p>
-                <input id="fileImport" type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-              </div>
-              <button onClick={downloadTemplate} className="w-full text-center text-[10px] font-bold text-blue-600 underline">Unduh Template Import (.xlsx)</button>
-              <button onClick={() => setShowImportModal(false)} className="w-full py-2 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold uppercase">Tutup</button>
-            </div>
           </div>
         </div>
       )}
