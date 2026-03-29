@@ -22,14 +22,14 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(({
     <div ref={ref} className="p-12 bg-white text-black font-serif print:p-8" style={{ width: '210mm', minHeight: '297mm' }}>
       {/* KOP SURAT */}
       <div className="flex justify-between items-center border-b-4 border-double border-black pb-2 mb-6">
-        <img src="/logo-ipsi.png" className="w-20 h-20 object-contain" alt="IPSI" />
+        <img src="public/images/ipsi.png" className="w-20 h-20 object-contain" alt="IPSI" />
         <div className="text-center flex-grow px-4">
           <h2 className="font-bold uppercase text-[14pt] leading-tight">Institut Seni Bela Diri Silat</h2>
           <h1 className="font-extrabold uppercase text-[20pt] leading-tight">CIPTA SEJATI</h1>
           <h3 className="font-bold uppercase text-[12pt] leading-tight text-blue-800">CABANG KEBUMEN</h3>
           <p className="italic text-[8.5pt]">Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen</p>
         </div>
-        <img src="/logo-isbds.png" className="w-20 h-20 object-contain" alt="ISBDS" />
+        <img src="public/images/isbds.png" className="w-20 h-20 object-contain" alt="ISBDS" />
       </div>
 
       <h4 className="text-center font-bold underline mb-8 uppercase text-[12pt]">Keterangan Tentang Data Diri Anggota</h4>
