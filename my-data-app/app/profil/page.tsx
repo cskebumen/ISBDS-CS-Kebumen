@@ -4,14 +4,13 @@ import React, { useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { 
   Printer, Search, ShieldCheck, Edit3, 
-  Download, History, Smartphone, MapPin, 
-  Calendar, Hash, User 
+  History, User, Download 
 } from 'lucide-react';
 import { CetakProfil } from '@/components/CetakProfil';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function ProfilAnggota() {
-  // 1. Ref khusus untuk konten yang akan dicetak (Kop Surat, dll)
+  // Ref ini harus mengarah ke div yang membungkus komponen CetakProfil secara eksklusif
   const componentRef = useRef<HTMLDivElement>(null);
   
   const [data, setData] = useState<any>(null);
@@ -19,7 +18,7 @@ export default function ProfilAnggota() {
   const [loading, setLoading] = useState(false);
   const [searchNia, setSearchNia] = useState('');
 
-  // 2. Logika Cetak menggunakan react-to-print terbaru
+  // Fungsi Cetak
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: `Profil_Anggota_${data?.nama_lengkap || 'ISBDS'}`,
@@ -48,7 +47,7 @@ export default function ProfilAnggota() {
         setRiwayat(sabuk || []);
       }
     } catch (error) {
-      alert("NIA tidak ditemukan atau terjadi kesalahan koneksi.");
+      alert("NIA tidak ditemukan.");
       setData(null);
     } finally {
       setLoading(false);
@@ -56,148 +55,147 @@ export default function ProfilAnggota() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] font-sans text-slate-900 pb-20">
-      {/* HEADER DASHBOARD (Sesuai profil.html) */}
-      <div className="max-w-7xl mx-auto px-8 pt-10">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+    <div className="min-h-screen bg-[#f8f9fa] pb-20 no-print-area">
+      {/* 1. UI DASHBOARD (Hanya tampil di layar) 
+          Sesuai referensi profil.html
+      */}
+      <div className="max-w-7xl mx-auto px-8 pt-10 screen-only">
+        <div className="flex justify-between items-end mb-12">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight mb-2 uppercase">Profil Anggota</h1>
-            <p className="text-slate-500 font-medium">Manajemen data personal dan riwayat sertifikasi ISBDS Cipta Sejati.</p>
+            <h1 className="text-4xl font-extrabold uppercase italic tracking-tighter">Profil Anggota</h1>
+            <p className="text-slate-500 font-medium mt-1">Sistem Informasi Manajemen ISBDS Cipta Sejati</p>
           </div>
           <div className="flex gap-3">
             {data && (
               <button 
                 onClick={() => handlePrint()} 
-                className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all"
+                className="flex items-center gap-2 px-8 py-3 bg-blue-700 text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:scale-105 transition-all"
               >
-                <Printer size={18} /> CETAK
+                <Printer size={20} /> CETAK PROFIL
               </button>
             )}
-            <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:opacity-90 transition-all">
-              <Edit3 size={18} /> EDIT DATA
-            </button>
           </div>
         </div>
 
-        {/* SEARCH BAR (Sesuai profil.html) */}
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm mb-12 border border-slate-100">
-          <div className="max-w-2xl">
-            <label className="block text-sm font-bold text-slate-400 mb-3 px-1 uppercase tracking-wider">Cari NIA Anggota</label>
-            <div className="relative flex items-center">
-              <Search className="absolute left-5 text-slate-300" size={20} />
+        {/* Form Pencarian */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm mb-12 border border-slate-100 flex gap-4 items-center">
+           <div className="relative flex-1">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={24} />
               <input 
                 type="text" 
                 value={searchNia}
                 onChange={(e) => setSearchNia(e.target.value)}
-                placeholder="Masukkan 12 digit NIA..." 
-                className="w-full pl-14 pr-32 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-100 transition-all text-lg font-bold"
+                placeholder="Cari berdasarkan NIA..." 
+                className="w-full pl-16 pr-6 py-5 bg-slate-50 border-none rounded-[1.5rem] font-bold text-lg focus:ring-2 focus:ring-blue-500/20"
               />
-              <button 
-                onClick={() => fetchProfilData(searchNia)}
-                className="absolute right-2 px-8 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-blue-700 transition-all"
-              >
-                {loading ? '...' : 'CARI'}
-              </button>
-            </div>
-          </div>
+           </div>
+           <button 
+             onClick={() => fetchProfilData(searchNia)}
+             className="px-12 py-5 bg-slate-900 text-white rounded-[1.5rem] font-black hover:bg-blue-800 transition-all shadow-lg"
+           >
+             {loading ? '...' : 'CARI'}
+           </button>
         </div>
 
+        {/* Tampilan Preview Dashboard (profil.html) */}
         {data ? (
           <div className="grid grid-cols-12 gap-8">
-            {/* KARTU PROFIL UTAMA */}
-            <div className="col-span-12 lg:col-span-8 bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-12 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-bl-full"></div>
-              
-              <div className="w-64 shrink-0 text-center">
-                <div className="aspect-[3/4] rounded-3xl bg-slate-100 overflow-hidden border-4 border-white shadow-md">
-                  {data.foto_url ? (
-                    <img src={data.foto_url} alt="Profil" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                      <User size={64} strokeWidth={1} />
-                      <p className="text-[10px] font-black uppercase mt-4">Tanpa Foto</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-6 flex items-center justify-between px-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-extrabold uppercase">{data.status_anggota || 'AKTIF'}</span>
-                </div>
+            <div className="col-span-8 bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 flex gap-10">
+              <div className="w-56 shrink-0 aspect-[3/4] rounded-[2rem] bg-slate-100 overflow-hidden border-4 border-white shadow-md">
+                 <img src={data.foto_url || '/placeholder.png'} className="w-full h-full object-cover" alt="Foto" />
               </div>
-
-              <div className="flex-1 space-y-8">
-                <div>
-                  <p className="text-xs font-bold text-blue-600 tracking-widest uppercase mb-1">Identitas Anggota</p>
-                  <h2 className="text-3xl font-extrabold text-slate-800 leading-tight uppercase">{data.nama_lengkap}</h2>
-                  <p className="text-lg font-medium text-slate-500 font-mono">NIA: {data.nia}</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 pt-6 border-t border-slate-50">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Tempat, Tanggal Lahir</label>
-                    <p className="text-sm font-bold text-slate-700">{data.tempat_lahir}, {data.tanggal_lahir}</p>
+              <div className="flex-1">
+                <span className="px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">{data.status_anggota || 'AKTIF'}</span>
+                <h2 className="text-4xl font-black mt-4 text-slate-900 leading-tight uppercase">{data.nama_lengkap}</h2>
+                <p className="text-xl font-bold text-blue-600 font-mono mt-1">NIA: {data.nia}</p>
+                <div className="grid grid-cols-2 gap-6 mt-10 pt-10 border-t border-slate-50">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Tempat, Tgl Lahir</label>
+                    <p className="font-bold text-slate-700">{data.tempat_lahir}, {data.tanggal_lahir}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Jenis Kelamin</label>
-                    <p className="text-sm font-bold text-slate-700">{data.jenis_kelamin}</p>
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
-                    <p className="text-sm font-bold text-slate-700 leading-relaxed">{data.alamat_lengkap}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Nomor HP/WA</label>
-                    <p className="text-sm font-bold text-slate-700">{data.no_hp || '-'}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Ranting</label>
-                    <p className="text-sm font-bold text-slate-700">{data.ranting}</p>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Ranting</label>
+                    <p className="font-bold text-slate-700">{data.ranting}</p>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* RIWAYAT SABUK (SIDEBAR) */}
-            <div className="col-span-12 lg:col-span-4">
-              <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200/50">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-lg font-extrabold uppercase tracking-tight">Riwayat Sabuk</h4>
-                  <History size={20} className="text-slate-400" />
-                </div>
-                <div className="space-y-4">
-                  {riwayat.map((item, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm hover:shadow-md transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-2 h-10 rounded-full ${item.tingkat?.toLowerCase().includes('biru') ? 'bg-blue-800' : 'bg-yellow-400'}`}></div>
-                        <div>
-                          <p className="text-sm font-bold uppercase">Sabuk {item.tingkat}</p>
-                          <p className="text-[10px] text-slate-400 font-medium italic">SK: {item.no_sertifikat}</p>
-                        </div>
+            {/* Sidebar Riwayat (profil.html) */}
+            <div className="col-span-4 bg-slate-900 p-8 rounded-[3rem] text-white">
+               <div className="flex justify-between items-center mb-8">
+                  <h3 className="font-black uppercase tracking-widest text-sm">Riwayat Sabuk</h3>
+                  <History className="opacity-30" />
+               </div>
+               <div className="space-y-4">
+                  {riwayat.map((s, i) => (
+                    <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/10">
+                      <div>
+                        <p className="text-xs font-black uppercase text-blue-400">Sabuk {s.tingkat}</p>
+                        <p className="text-[10px] font-medium opacity-50 italic">SK: {s.no_sertifikat}</p>
                       </div>
-                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">{item.tahun}</span>
+                      <span className="text-xs font-bold px-3 py-1 bg-white/10 rounded-lg">{s.tahun}</span>
                     </div>
                   ))}
-                </div>
-              </div>
+               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-slate-200">
-            <ShieldCheck size={80} className="mx-auto text-slate-100 mb-4" strokeWidth={1} />
-            <h3 className="text-xl font-bold text-slate-300 uppercase italic">Masukkan NIA untuk memuat profil</h3>
+          <div className="py-32 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+             <ShieldCheck size={64} className="mx-auto text-slate-200 mb-4" />
+             <p className="font-black text-slate-300 uppercase italic tracking-widest text-lg">Data belum dimuat</p>
           </div>
         )}
       </div>
 
-      {/* --- BAGIAN RENDER CETAK (OFF-SCREEN) --- */}
-      {/* Diletakkan di dalam div tersembunyi agar tidak merusak UI Dashboard. 
-          Isinya akan menggunakan template dari cetak-profil.html.
+      {/* 2. AREA CETAK KHUSUS (TERSEMBUNYI DI LAYAR)
+          Sesuai referensi cetak-profil.html
       */}
-      <div style={{ display: 'none' }}>
+      <div className="print-only-container">
         <div ref={componentRef}>
           {data && <CetakProfil data={data} riwayat={riwayat} />}
         </div>
       </div>
+
+      {/* CSS CRITICAL UNTUK MEMISAHKAN LAYAR & HASIL CETAK */}
+      <style jsx global>{`
+        /* Sembunyikan container cetak di browser biasa */
+        .print-only-container {
+          display: none;
+        }
+
+        @media print {
+          /* Hilangkan SEMUA elemen dashboard saat print */
+          .screen-only, 
+          header, 
+          aside, 
+          button, 
+          .no-print-area {
+            display: none !important;
+          }
+
+          /* Tampilkan HANYA container cetak */
+          .print-only-container {
+            display: block !important;
+            width: 100%;
+            height: auto;
+            background: white;
+            padding: 0;
+            margin: 0;
+          }
+
+          /* Reset margin halaman agar pas A4 */
+          @page {
+            size: A4 portrait;
+            margin: 1cm;
+          }
+          
+          body {
+            background: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
+
