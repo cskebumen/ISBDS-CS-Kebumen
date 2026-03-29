@@ -201,7 +201,6 @@ export default function ProfilAnggotaPage() {
       </main>
     </div>
 
-    {/* RENDER CETAK */}
     <div className="hidden-print">
       <div ref={componentRef}>
         {data && <CetakProfil data={data} riwayat={riwayat} />}
