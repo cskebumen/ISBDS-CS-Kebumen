@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+  .font-body {
+    font-family: var(--font-inter), sans-serif;
+  }
+  .font-headline {
+    font-family: var(--font-manrope), sans-serif;
+  }
+}
