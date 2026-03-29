@@ -16,8 +16,6 @@ export default function ProfilAnggotaPage() {
   const [riwayat, setRiwayat] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchNia, setSearchNia] = useState('');
-
-  // State untuk Hamburger Menu Mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handlePrint = useReactToPrint({
@@ -26,14 +24,16 @@ export default function ProfilAnggotaPage() {
   });
 
   const fetchProfilData = async (targetNia: string) => {
-    if (!targetNia) return;
+    const nia = targetNia.trim();
+    if (!nia) return;
 
     setLoading(true);
+
     try {
       const { data: anggota, error } = await supabase
         .from('anggota')
         .select('*')
-        .eq('nia', targetNia)
+        .eq('nia', nia)
         .single();
 
       if (error) throw error;
@@ -65,11 +65,13 @@ export default function ProfilAnggotaPage() {
           <header className="fixed top-0 right-0 left-0 md:left-64 z-40 bg-white/80 backdrop-blur-md flex justify-between items-center px-4 md:px-8 py-4 border-b border-slate-100">
             <div className="flex items-center gap-4">
               <button
+                type="button"
                 onClick={() => setIsSidebarOpen(true)}
                 className="md:hidden p-2 text-blue-900"
               >
                 <span className="material-symbols-outlined">menu</span>
               </button>
+
               <h2 className="text-xl font-extrabold text-blue-900 tracking-tighter">
                 Cabang Kebumen
               </h2>
@@ -95,33 +97,37 @@ export default function ProfilAnggotaPage() {
             </div>
           </header>
 
-          {/* HEADER SECTION */}
+          {/* Header Section */}
           <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
             <div className="mb-10">
               <h1 className="text-3xl font-extrabold text-primary tracking-tight">
                 Profil Anggota
               </h1>
               <p className="text-tertiary font-medium mb-1">
-                Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta
-                Sejati
+                Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati
               </p>
 
               {data && (
                 <div className="flex gap-2 mt-4">
                   <button
+                    type="button"
                     onClick={() => handlePrint()}
                     className="flex items-center gap-2 px-6 py-3 bg-blue-700 text-white rounded-2xl font-black shadow-lg shadow-blue-200 hover:bg-blue-800 transition-all active:scale-95 text-sm"
                   >
                     <Printer size={18} /> CETAK
                   </button>
-                  <button className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:text-blue-600 shadow-sm">
+
+                  <button
+                    type="button"
+                    className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:text-blue-600 shadow-sm"
+                  >
                     <Edit3 size={18} />
                   </button>
                 </div>
               )}
             </div>
 
-            {/* SEARCH BAR */}
+            {/* Search Bar */}
             <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100 flex items-center mb-10 group focus-within:border-blue-200 transition-all">
               <div className="flex-1 flex items-center px-6">
                 <Search className="text-slate-300 mr-4" size={22} />
@@ -129,12 +135,18 @@ export default function ProfilAnggotaPage() {
                   type="text"
                   value={searchNia}
                   onChange={(e) => setSearchNia(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchProfilData(searchNia)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchProfilData(searchNia);
+                    }
+                  }}
                   placeholder="Cari NIA (Contoh: 03.06.02.000042)"
-                  className="w-full py-4 bg-transparent border-none focus:ring-0 font-bold text-slate-700 placeholder:text-slate-300"
+                  className="w-full py-4 bg-transparent border-none focus:ring-0 font-bold text-slate-700 placeholder:text-slate-300 outline-none"
                 />
               </div>
+
               <button
+                type="button"
                 onClick={() => fetchProfilData(searchNia)}
                 className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-blue-700 transition-all text-sm"
               >
@@ -142,7 +154,7 @@ export default function ProfilAnggotaPage() {
               </button>
             </div>
 
-            {/* CONTENT CARD */}
+            {/* Content */}
             {data ? (
               <div className="grid grid-cols-12 gap-8">
                 <div className="col-span-12 lg:col-span-8 bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-10">
@@ -150,10 +162,11 @@ export default function ProfilAnggotaPage() {
                     <div className="aspect-[3/4] rounded-3xl bg-slate-50 overflow-hidden border-4 border-white shadow-xl">
                       <img
                         src={data.foto_url || '/placeholder.png'}
-                        className="w-full h-full object-cover"
                         alt="Profile"
+                        className="w-full h-full object-cover"
                       />
                     </div>
+
                     <div className="mt-4 p-3 bg-blue-50 rounded-xl text-center">
                       <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
                         Status Anggota
@@ -169,8 +182,10 @@ export default function ProfilAnggotaPage() {
                       <h2 className="text-3xl font-black text-slate-900 uppercase leading-tight tracking-tight">
                         {data.nama_lengkap}
                       </h2>
+
                       <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 bg-slate-100 text-slate-500 rounded-lg font-mono font-bold text-sm uppercase">
-                        <Hash size={14} className="text-blue-500" /> {data.nia}
+                        <Hash size={14} className="text-blue-500" />
+                        {data.nia}
                       </div>
                     </div>
 
@@ -203,30 +218,37 @@ export default function ProfilAnggotaPage() {
                   </div>
                 </div>
 
-                {/* RIWAYAT SABUK SIDEBAR */}
+                {/* Riwayat Sabuk */}
                 <div className="col-span-12 lg:col-span-4">
                   <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl shadow-slate-200">
                     <h3 className="font-black uppercase text-xs mb-6 text-blue-400 flex justify-between items-center tracking-widest">
                       Riwayat Sabuk <History size={16} />
                     </h3>
+
                     <div className="space-y-3">
-                      {riwayat.map((s, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10"
-                        >
-                          <div className="w-1.5 h-8 bg-blue-500 rounded-full"></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black truncate">{s.tingkat}</p>
-                            <p className="text-[9px] font-medium text-white/40 italic truncate">
-                              {s.no_sertifikat}
-                            </p>
+                      {riwayat.length > 0 ? (
+                        riwayat.map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10"
+                          >
+                            <div className="w-1.5 h-8 bg-blue-500 rounded-full"></div>
+
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black truncate">{s.tingkat}</p>
+                              <p className="text-[9px] font-medium text-white/40 italic truncate">
+                                {s.no_sertifikat}
+                              </p>
+                            </div>
+
+                            <span className="text-[10px] font-black text-blue-400">
+                              {s.tahun}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-black text-blue-400">
-                            {s.tahun}
-                          </span>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-sm text-white/60">Belum ada riwayat sabuk.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -245,8 +267,11 @@ export default function ProfilAnggotaPage() {
         </main>
       </div>
 
+      {/* Area cetak */}
       <div className="hidden-print">
-        <div ref={componentRef}>{data && <CetakProfil data={data} riwayat={riwayat} />}</div>
+        <div ref={componentRef}>
+          {data && <CetakProfil data={data} riwayat={riwayat} />}
+        </div>
       </div>
 
       <style jsx global>{`
@@ -254,10 +279,12 @@ export default function ProfilAnggotaPage() {
           position: fixed;
           left: -9999px;
         }
+
         @media print {
           .screen-only {
             display: none !important;
           }
+
           .hidden-print {
             position: static;
             left: 0;
