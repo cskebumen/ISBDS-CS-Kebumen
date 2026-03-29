@@ -59,9 +59,8 @@ export default function ProfilAnggotaPage() {
   };
 
   return (
-<div className="flex min-h-screen bg-[#f8f9fa] font-sans">
-      {/* SIDEBAR: Logika isSidebarOpen dikirim ke komponen Sidebar */}
-      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+<div className="flex min-h-screen bg-surface">
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* TOPBAR */}
