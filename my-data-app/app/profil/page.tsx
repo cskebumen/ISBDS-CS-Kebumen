@@ -24,7 +24,7 @@ export default function ProfilAnggotaPage() {
   
   // State untuk Hamburger Menu Mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-const [loading, setLoading] = useState(true);
+
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
