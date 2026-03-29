@@ -59,19 +59,9 @@ export default function ProfilAnggotaPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fa] font-sans">
-      {/* SIDEBAR - Dengan Logic Mobile */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out bg-white`}>
-        <Sidebar />
-      </div>
-
-      {/* OVERLAY MOBILE */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+<div className="flex min-h-screen bg-[#f8f9fa] font-sans">
+      {/* SIDEBAR: Logika isSidebarOpen dikirim ke komponen Sidebar */}
+      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* TOPBAR */}
