@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -18,43 +23,42 @@ export default function Sidebar() {
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + '/');
 
   return (
-    <aside className="h-screen w-64 fixed left-0 top-0 hidden md:flex flex-col bg-slate-50 dark:bg-slate-900 shadow-xl z-40 py-8 gap-1">
-      <div className="px-8 mb-8">
-        <h1 className="text-lg font-bold text-blue-900 dark:text-blue-50">ISBDS Cipta Sejati</h1>
-      </div>
-      <div className="flex flex-col flex-1 gap-1 px-2">
-        {menuItems.map((item) => (
-          <Link
-            key={item.name}
-            href={item.path}
-            className={`rounded-lg px-4 py-3 flex items-center gap-3 transition-all duration-200 ease-in-out active:scale-95 ${
-              isActive(item.path)
-                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-            }`}
-          >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="font-manrope font-semibold text-sm tracking-tight">{item.name}</span>
-          </Link>
-        ))}
-      </div>
-      <div className="mt-auto px-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-3 mb-6">
-          <img
-            alt="Admin"
-            className="w-10 h-10 rounded-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/..."
-          />
-          <div className="overflow-hidden">
-            <p className="font-manrope font-bold text-sm text-blue-900 truncate">Admin Kebumen</p>
-            <p className="text-xs text-slate-500 truncate">Administrator</p>
+    <>
+      {/* Overlay untuk mobile */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose}></div>
+      )}
+      
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-slate-50 shadow-xl z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex flex-col h-full py-8">
+          <div className="px-8 mb-8 flex justify-between items-center">
+            <h1 className="text-lg font-bold text-blue-900">ISBDS Cipta Sejati</h1>
+            <button onClick={onClose} className="md:hidden p-2 text-slate-500">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <nav className="flex-1 space-y-1 px-2">
+            {menuItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.path}
+                onClick={onClose}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive(item.path) ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                <span>{item.name}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="px-6 pt-6 border-t border-slate-200">
+            <Link href="/login" className="flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg">
+              <span className="material-symbols-outlined">logout</span>
+              <span>Logout</span>
+            </Link>
           </div>
         </div>
-        <Link href="/login" className="text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg px-4 py-3 flex items-center gap-3 transition-all">
-          <span className="material-symbols-outlined">logout</span>
-          <span className="font-manrope font-semibold text-sm tracking-tight">Logout</span>
-        </Link>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
