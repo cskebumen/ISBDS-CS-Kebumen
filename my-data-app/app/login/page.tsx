@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -149,17 +150,8 @@ export default function LoginPage() {
           </div>
         </section>
       </main>
+<Footer />
 
-      <footer className="flex flex-col md:flex-row justify-between items-center px-4 md:px-12 w-full py-6 md:py-4 bg-slate-50 border-t border-slate-200 lg:border-t-0 mt-auto">
-        <div className="font-inter text-[10px] md:text-xs tracking-wide text-slate-500 mb-6 md:mb-0 text-center md:text-left">
-          © 2024 ISBDS Cipta Sejati Cabang Kebumen. <br className="sm:hidden"/> All rights reserved.
-        </div>
-        <div className="flex flex-wrap justify-center gap-4 md:gap-8">
-          <a href="#" className="font-inter text-[10px] md:text-xs tracking-wide text-slate-500 hover:text-blue-600 transition-all opacity-80 hover:opacity-100">Bantuan</a>
-          <a href="#" className="font-inter text-[10px] md:text-xs tracking-wide text-slate-500 hover:text-blue-600 transition-all opacity-80 hover:opacity-100">Kebijakan Privasi</a>
-          <a href="#" className="font-inter text-[10px] md:text-xs tracking-wide text-slate-500 hover:text-blue-600 transition-all opacity-80 hover:opacity-100 font-medium underline">Kontak Support</a>
-        </div>
-      </footer>
     </div>
   );
 }
