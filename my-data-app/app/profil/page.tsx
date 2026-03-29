@@ -61,30 +61,31 @@ export default function ProfilAnggotaPage() {
   return (
 <div className="flex min-h-screen bg-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-        {/* TOPBAR */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-100 screen-only">
+      <main className="flex-1 md:ml-64 flex flex-col min-h-screen bg-surface pb-24">
+        
+        {/* TopAppBar */}
+        <header className="fixed top-0 right-0 left-0 md:left-64 z-40 bg-white/80 backdrop-blur-md flex justify-between items-center px-4 md:px-8 py-4 border-b border-slate-100">
           <div className="flex items-center gap-4">
-            {/* Tombol Hamburger - Hanya muncul di Mobile */}
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 lg:hidden hover:bg-slate-100 rounded-xl transition-all"
-            >
-              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-blue-900">
+              <span className="material-symbols-outlined">menu</span>
             </button>
-            
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="p-2 bg-blue-600 rounded-lg text-white">
-                <User size={18} />
+            <h2 className="text-xl font-extrabold text-blue-900 tracking-tighter">Cabang Kebumen</h2>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-4 text-slate-400">
+              <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">help_outline</span>
+              <span className="material-symbols-outlined cursor-pointer hover:text-blue-800">info</span>
+            </div>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-800">Budi Santoso</p>
+                <p className="text-[10px] text-slate-500 font-medium">Admin Cabang</p>
               </div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Profil Anggota</h2>
+              <ProfilePopup />
             </div>
           </div>
-          <ProfilePopup />
         </header>
 
-        <main className="p-6 lg:p-10 max-w-7xl mx-auto w-full flex-1 screen-only">
           {/* HEADER SECTION */}
 <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
           <div className="mb-10">
