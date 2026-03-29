@@ -59,8 +59,9 @@ export default function ProfilAnggotaPage() {
   };
 
   return (
-<div className="flex min-h-screen bg-surface">
+    <div className="flex min-h-screen bg-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      
       <main className="flex-1 md:ml-64 flex flex-col min-h-screen bg-surface pb-24">
         
         {/* TopAppBar */}
@@ -86,17 +87,14 @@ export default function ProfilAnggotaPage() {
           </div>
         </header>
 
-          {/* HEADER SECTION */}
-<div className="pt-24 px-4 md:px-8 pb-12 flex-1">
+        {/* HEADER SECTION */}
+        <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
           <div className="mb-10">
-            
             <h1 className="text-3xl font-extrabold text-primary tracking-tight">Profil Anggota</h1>
-<p className="text-tertiary font-medium mb-1">Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati</p>
-          </div>
-
+            <p className="text-tertiary font-medium mb-1">Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati</p>
             
             {data && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-4">
                 <button 
                   onClick={() => handlePrint()} 
                   className="flex items-center gap-2 px-6 py-3 bg-blue-700 text-white rounded-2xl font-black shadow-lg shadow-blue-200 hover:bg-blue-800 transition-all active:scale-95 text-sm"
@@ -197,26 +195,25 @@ export default function ProfilAnggotaPage() {
               <p className="font-black text-slate-300 uppercase tracking-widest">Data belum dimuat</p>
             </div>
           )}
-        </main>
+        </div> {/* Penutup Header Section / Konten Utama */}
 
         <Footer />
-      </div>
-
-      {/* RENDER CETAK */}
-      <div className="hidden-print">
-        <div ref={componentRef}>
-          {data && <CetakProfil data={data} riwayat={riwayat} />}
-        </div>
-      </div>
-
-      <style jsx global>{`
-        .hidden-print { position: fixed; left: -9999px; }
-        @media print {
-          .screen-only { display: none !important; }
-          .hidden-print { position: static; left: 0; display: block; }
-        }
-      `}</style>
+      </main>
     </div>
+
+    {/* RENDER CETAK */}
+    <div className="hidden-print">
+      <div ref={componentRef}>
+        {data && <CetakProfil data={data} riwayat={riwayat} />}
+      </div>
+    </div>
+
+    <style jsx global>{`
+      .hidden-print { position: fixed; left: -9999px; }
+      @media print {
+        .screen-only { display: none !important; }
+        .hidden-print { position: static; left: 0; display: block; }
+      }
+    `}</style>
   );
 }
-
