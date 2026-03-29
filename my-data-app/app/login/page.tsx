@@ -65,7 +65,7 @@ export default function LoginPage() {
               <div className="flex flex-col items-center mb-8 md:mb-10">
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/5 rounded-full flex items-center justify-center mb-4 md:mb-6">
                   <img
-                    src="/images/logo.png"
+                    src="/images/isbds.png"
                     alt="Logo ISBDS"
                     className="w-10 h-10 md:w-14 md:h-14 object-contain grayscale brightness-50"
                   />
