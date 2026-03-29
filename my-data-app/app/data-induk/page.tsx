@@ -39,9 +39,11 @@ export default function DataIndukPage() {
   // Modals
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false); // Modal Detail Baru
   
   const [isSaving, setIsSaving] = useState(false);
   const [editingAnggota, setEditingAnggota] = useState<Anggota | null>(null);
+  const [selectedAnggota, setSelectedAnggota] = useState<Anggota | null>(null); // State Data Detail
 
   const [formData, setFormData] = useState<Partial<Anggota>>({
     nama_lengkap: '', ranting: '', cabang: 'Kebumen', tempat_lahir: '', tanggal_lahir: '', 
@@ -49,17 +51,27 @@ export default function DataIndukPage() {
   });
   
   const [riwayatFields, setRiwayatFields] = useState<RiwayatSabuk[]>([{ tingkat: '', no_sertifikat: '', tahun: '' }]);
+  const [detailRiwayat, setDetailRiwayat] = useState<RiwayatSabuk[]>([]); // Riwayat untuk modal detail
 
   useEffect(() => { fetchAnggota(); }, []);
 
   const fetchAnggota = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('anggota').select('*').order('created_at', { ascending: false });
+    // Diubah menjadi ascending: true agar NIA terkecil (000001) di atas
+    const { data, error } = await supabase.from('anggota').select('*').order('nia', { ascending: true });
     if (!error && data) setAnggota(data);
     setLoading(false);
   };
 
-  // --- Fitur Excel (Export/Import/Template) ---
+  // --- Fungsi Buka Detail Modal ---
+  const handleOpenDetail = async (item: Anggota) => {
+    setSelectedAnggota(item);
+    setShowDetailModal(true);
+    // Ambil data riwayat sabuk dari Supabase
+    const { data } = await supabase.from('riwayat_sabuk').select('*').eq('anggota_id', item.id).order('tahun', { ascending: true });
+    setDetailRiwayat(data || []);
+  };
+
   const exportToExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(anggota.map(a => ({
       NIA: a.nia, 'Nama Lengkap': a.nama_lengkap, Ranting: a.ranting, Status: a.status_anggota, 'No HP': a.no_hp
@@ -124,7 +136,7 @@ export default function DataIndukPage() {
         let newNia = "03.06.02.000001";
         if (lastData && lastData.length > 0) {
           const lastNum = parseInt(lastData[0].nia.split('.').pop() || '0');
-          newNia = `03.06.02.${(lastNum + 1).toString().padStart(6, '0')}`; //
+          newNia = `03.06.02.${(lastNum + 1).toString().padStart(6, '0')}`;
         }
         const { data, error: insErr } = await supabase.from('anggota').insert([{ ...formData, nia: newNia }]).select().single();
         if (insErr) throw insErr;
@@ -171,7 +183,6 @@ export default function DataIndukPage() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b">
@@ -196,7 +207,11 @@ export default function DataIndukPage() {
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex justify-center items-center gap-2">
-                        <Link href={`/profil/${item.nia}`} className="p-1 text-blue-500 bg-blue-50 rounded-md"><span className="material-symbols-outlined text-[18px]">visibility</span></Link>
+                        {/* Diubah jadi Modal Detail */}
+                        <button onClick={() => handleOpenDetail(item)} className="p-1 text-blue-500 bg-blue-50 rounded-md">
+                          <span className="material-symbols-outlined text-[18px]">visibility</span>
+                        </button>
+                        
                         <button onClick={async () => { 
                             setEditingAnggota(item); 
                             setFormData(item); 
@@ -204,6 +219,7 @@ export default function DataIndukPage() {
                             setRiwayatFields(data && data.length > 0 ? data : [{ tingkat: '', no_sertifikat: '', tahun: '' }]); 
                             setShowTambahModal(true); 
                         }} className="p-1 text-amber-500 bg-amber-50 rounded-md"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                        
                         <button onClick={async () => { if(confirm('Hapus permanent?')) { await supabase.from('riwayat_sabuk').delete().eq('anggota_id', item.id); await supabase.from('anggota').delete().eq('id', item.id); fetchAnggota(); } }} className="p-1 text-red-500 bg-red-50 rounded-md"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                       </div>
                     </td>
@@ -216,6 +232,93 @@ export default function DataIndukPage() {
         <Footer />
       </main>
 
+      {/* --- MODAL DETAIL ANGGOTA (SESUAI GAMBAR) --- */}
+      {showDetailModal && selectedAnggota && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-5 border-b flex justify-between items-center bg-white">
+              <h3 className="font-black text-primary uppercase text-[12px]">Detail Anggota</h3>
+              <button onClick={() => setShowDetailModal(false)} className="material-symbols-outlined text-slate-400 hover:text-slate-600 transition-colors">close</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[80vh]">
+              {/* Header Profile */}
+              <div className="flex flex-col md:flex-row gap-6 items-start mb-8">
+                <div className="w-32 h-40 bg-slate-100 rounded-2xl border-2 border-slate-100 flex-shrink-0 overflow-hidden">
+                  {selectedAnggota.foto_url ? (
+                    <img src={selectedAnggota.foto_url} className="w-full h-full object-cover" alt="Foto" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                      <span className="material-symbols-outlined text-4xl">person</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex-1">
+                  <h2 className="text-xl font-black text-slate-800 uppercase leading-none">{selectedAnggota.nama_lengkap}</h2>
+                  <p className="text-sm font-mono text-slate-400 mt-1">{selectedAnggota.nia}</p>
+                  <div className="flex gap-2 mt-3">
+                    <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded uppercase">{selectedAnggota.cabang}</span>
+                    <span className="px-3 py-1 bg-green-500 text-white text-[10px] font-bold rounded uppercase">{selectedAnggota.status_anggota}</span>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Tempat, Tanggal Lahir</p>
+                      <p className="text-[11px] font-bold text-slate-700 uppercase">{selectedAnggota.tempat_lahir}, {selectedAnggota.tanggal_lahir}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Alamat Lengkap</p>
+                      <p className="text-[11px] font-bold text-slate-700 uppercase">{selectedAnggota.alamat_lengkap}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">No. HP / WhatsApp</p>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                        <span className="material-symbols-outlined text-[16px] text-green-500">call</span>
+                        {selectedAnggota.no_hp}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabel Riwayat Sabuk */}
+              <div>
+                <h4 className="flex items-center gap-2 text-[11px] font-black text-slate-800 uppercase mb-3">
+                  <span className="material-symbols-outlined text-[18px]">military_tech</span> Riwayat Sabuk
+                </h4>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase">
+                      <tr>
+                        <th className="px-4 py-2">Sabuk</th>
+                        <th className="px-4 py-2">Tahun</th>
+                        <th className="px-4 py-2">Sertifikat</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {detailRiwayat.length > 0 ? detailRiwayat.map((r, i) => (
+                        <tr key={i}>
+                          <td className="px-4 py-2 font-medium">{r.tingkat}</td>
+                          <td className="px-4 py-2">{r.tahun}</td>
+                          <td className="px-4 py-2 text-slate-400">{r.no_sertifikat || '-'}</td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center text-slate-400">Belum ada riwayat kenaikan sabuk.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-5 bg-slate-50 flex justify-end">
+               <button onClick={() => setShowDetailModal(false)} className="px-6 py-2 bg-slate-200 text-slate-600 rounded-xl font-bold text-[10px] uppercase tracking-wider">Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Form Tambah/Edit */}
       {showTambahModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-3">
@@ -227,7 +330,6 @@ export default function DataIndukPage() {
             
             <form onSubmit={handleSave} className="p-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {/* Foto */}
                 <div className="md:col-span-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block italic">Pas Foto 3x4</label>
                   <div className="aspect-[3/4] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer">
@@ -236,7 +338,6 @@ export default function DataIndukPage() {
                   </div>
                 </div>
 
-                {/* Identitas */}
                 <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Nama Lengkap</label>
@@ -264,7 +365,6 @@ export default function DataIndukPage() {
                 </div>
               </div>
 
-              {/* Alamat & Status */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-5">
                 <div className="md:col-span-3">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
@@ -289,7 +389,6 @@ export default function DataIndukPage() {
                 </div>
               </div>
 
-              {/* Sabuk */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="font-black text-primary text-[10px] uppercase tracking-wider flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">military_tech</span> Riwayat Kenaikan Sabuk</h4>
