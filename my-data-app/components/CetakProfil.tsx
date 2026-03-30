@@ -158,7 +158,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
       margin={0} 
       displayValue={true}
     />
-
+</div>
           <p className="text-[9px] text-gray-400 text-right leading-tight">
             Dokumen ini dihasilkan secara otomatis oleh
             <br />
