@@ -67,20 +67,20 @@ export default function SertifikatPage() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-const handleDownloadPDF = async () => {
-  if (!contentRef.current) return;
-  const element = contentRef.current;
-  const opt = {
-    margin: [0.3, 0.3, 0.3, 0.3], // top, right, bottom, left (dalam inci) - memberi margin agar tidak mepet
-    filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, letterRendering: true },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  // Download PDF langsung tanpa dialog print
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !html2pdf) return;
+    const element = contentRef.current;
+    const opt = {
+      margin: 0,                      // margin diatur lewat padding di elemen
+      filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    const pdf = await html2pdf();
+    await pdf.set(opt).from(element).save();
   };
-  // Import library secara dinamis saat dibutuhkan
-  const html2pdf = (await import('html2pdf.js')).default;
-  await html2pdf(element, opt);
-};
 
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
@@ -408,9 +408,10 @@ const handleDownloadPDF = async () => {
                   <div
                     style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                   >
-                    <div ref={contentRef} style={{ width: '210mm', margin: '0 auto' }}>
+                    {/* Konten sertifikat dengan padding untuk margin PDF */}
+                    <div ref={contentRef} style={{ width: '210mm', margin: '0 auto', backgroundColor: 'white' }}>
                       {generatedSertifikat && anggota ? (
-                        <div className="bg-white p-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+                        <div className="bg-white" style={{ padding: '10mm 12mm', fontFamily: 'Inter, sans-serif' }}>
                           {/* Kop */}
                           <div className="flex justify-between items-center border-b-4 border-double border-black pb-2 mb-4">
                             <img src="/images/ipsi.png" className="h-16 w-auto" alt="IPSI" />
