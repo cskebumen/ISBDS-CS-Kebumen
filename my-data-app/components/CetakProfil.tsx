@@ -99,7 +99,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             Keterangan Tentang Data Diri Anggota
           </h4>
 
-          {/* DATA DIRI dengan label lebar tetap */}
+          {/* DATA DIRI dengan label lebar tetap 190px */}
           <div className="space-y-0.5 mb-3 ml-2" style={{ fontSize: `calc(${baseFontSize} - 1pt)` }}>
             <div className="flex">
               <div style={{ width: '190px', fontWeight: 'bold' }}>1. Nama Anggota</div>
@@ -164,7 +164,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           </table>
         </div>
 
-        {/* TANDA TANGAN dengan gambar */}
+        {/* TANDA TANGAN dengan gambar dan teks lengkap */}
         <div className={`flex justify-between items-start px-2 ${marginBottom === 2 ? 'mt-4' : marginBottom === 1.5 ? 'mt-3' : 'mt-2'}`}>
           <div
             style={{
@@ -184,9 +184,12 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
               <span style={{ fontSize: '7pt', color: '#9ca3af' }}>PAS FOTO 3X4</span>
             )}
           </div>
-          <div className="text-center" style={{ marginTop: '1rem' }}>
-            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, marginBottom: '0.5rem' }}>Kebumen, {tanggalCetak}</p>
-            {/* Gambar tanda tangan */}
+
+          <div className="text-center" style={{ marginTop: '0.5rem' }}>
+            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, marginBottom: '0.25rem' }}>Kebumen, {tanggalCetak}</p>
+            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              Ketua Cabang ISBDS Cipta Sejati Kebumen
+            </p>
             <img
               src="/images/ketua.png"
               alt="Tanda Tangan Ketua"
