@@ -466,7 +466,7 @@ const handleDownloadPDF = async () => {
                             </div>
                           </div>
 
-                          <div className="flex items-stretch justify-between mt-6 gap-3">
+                          <div className="flex items-stretch justify-between mt-6 gap-3 px-4">
                             <div className="text-center w-[2.5cm]">
                               <div className="border border-black w-[2.2cm] h-[2.8cm] mx-auto overflow-hidden">
                                 <img
