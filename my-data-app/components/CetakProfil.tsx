@@ -99,16 +99,40 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             Keterangan Tentang Data Diri Anggota
           </h4>
 
-          {/* DATA DIRI */}
+          {/* DATA DIRI dengan label lebar tetap */}
           <div className="space-y-0.5 mb-3 ml-2" style={{ fontSize: `calc(${baseFontSize} - 1pt)` }}>
-            <div className="flex"><div className="w-52 font-bold">1. Nama Anggota</div><div>: {data.nama_lengkap || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">2. Nomor Induk Anggota (NIA)</div><div className="font-mono">: {data.nia || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">3. Tempat, Tanggal Lahir</div><div>: {data.tempat_lahir || '-'}, {data.tanggal_lahir || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">4. Jenis Kelamin</div><div>: {data.jenis_kelamin || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">5. Alamat Lengkap</div><div className="flex-1">: {data.alamat_lengkap || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">6. Ranting / Unit</div><div>: {data.ranting || '-'}</div></div>
-            <div className="flex"><div className="w-52 font-bold">7. Cabang</div><div>: KEBUMEN</div></div>
-            <div className="flex"><div className="w-52 font-bold">8. No. HP / WhatsApp</div><div>: {data.no_hp || '-'}</div></div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>1. Nama Anggota</div>
+              <div>: {data.nama_lengkap || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>2. Nomor Induk Anggota (NIA)</div>
+              <div className="font-mono">: {data.nia || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>3. Tempat, Tanggal Lahir</div>
+              <div>: {data.tempat_lahir || '-'}, {data.tanggal_lahir || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>4. Jenis Kelamin</div>
+              <div>: {data.jenis_kelamin || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>5. Alamat Lengkap</div>
+              <div className="flex-1">: {data.alamat_lengkap || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>6. Ranting / Unit</div>
+              <div>: {data.ranting || '-'}</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>7. Cabang</div>
+              <div>: KEBUMEN</div>
+            </div>
+            <div className="flex">
+              <div style={{ width: '190px', fontWeight: 'bold' }}>8. No. HP / WhatsApp</div>
+              <div>: {data.no_hp || '-'}</div>
+            </div>
           </div>
 
           <p className="font-bold mb-1" style={{ fontSize: `calc(${baseFontSize} - 0.5pt)` }}>9. Riwayat Sabuk</p>
@@ -140,8 +164,8 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           </table>
         </div>
 
-        {/* TANDA TANGAN dan QR */}
-        <div className={`flex justify-between items-start px-2 ${marginBottom === 2 ? 'mt-2' : marginBottom === 1.5 ? 'mt-1' : 'mt-0'}`}>
+        {/* TANDA TANGAN dengan gambar */}
+        <div className={`flex justify-between items-start px-2 ${marginBottom === 2 ? 'mt-4' : marginBottom === 1.5 ? 'mt-3' : 'mt-2'}`}>
           <div
             style={{
               width: fotoWidth,
@@ -160,18 +184,21 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
               <span style={{ fontSize: '7pt', color: '#9ca3af' }}>PAS FOTO 3X4</span>
             )}
           </div>
-          <div className="text-center">
-            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)` }}>Kebumen, {tanggalCetak}</p>
-            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, marginBottom: baseFontSize === '13.5pt' ? '2rem' : (baseFontSize === '11.5pt' ? '1.5rem' : '1rem') }}>
-              Ketua Cabang ISBDS CS Kebumen,
-            </p>
+          <div className="text-center" style={{ marginTop: '1rem' }}>
+            <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, marginBottom: '0.5rem' }}>Kebumen, {tanggalCetak}</p>
+            {/* Gambar tanda tangan */}
+            <img
+              src="/images/ketua.png"
+              alt="Tanda Tangan Ketua"
+              style={{ height: '2.2cm', width: 'auto', marginBottom: '0.5rem' }}
+            />
             <p className="font-bold underline" style={{ fontSize: `calc(${baseFontSize} - 0.5pt)` }}>AHMAD TAUFIK</p>
             <p style={{ fontSize: `calc(${baseFontSize} - 2pt)` }}>NIA. 03.06.02.00003</p>
           </div>
         </div>
 
         {/* FOOTER BARCODE */}
-        <div className={`mt-${marginBottom} pt-2 border-t border-gray-200 flex items-center justify-between`}>
+        <div className={`pt-2 border-t border-gray-200 flex items-center justify-between`}>
           <div>
             <QRCodeSVG
               value={qrData}
