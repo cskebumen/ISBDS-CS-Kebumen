@@ -2,23 +2,39 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implementasi autentikasi dengan Supabase nanti
-    router.push('/dashboard');
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Login gagal. Periksa email dan password Anda.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
-      {/* Header */}
       <header className="fixed top-0 w-full z-50 flex justify-between items-center px-4 md:px-8 py-4 md:py-6 bg-transparent">
         <div className="text-lg md:text-xl font-extrabold text-blue-900 tracking-tighter font-headline">
           ISBDS Cipta Sejati
@@ -34,7 +50,6 @@ export default function LoginPage() {
       </header>
 
       <main className="flex-grow flex flex-col lg:flex-row items-stretch min-h-screen">
-        {/* Kolom Kiri: Slider informasi (disembunyikan di mobile) */}
         <section className="hidden md:flex flex-col lg:w-3/5 relative overflow-hidden items-center justify-center py-20 lg:py-0 min-h-[400px] lg:min-h-screen">
           <div className="absolute inset-0 z-0">
             <div className="w-full h-full bg-tertiary-container/60 backdrop-blur-sm"></div>
@@ -57,7 +72,6 @@ export default function LoginPage() {
           </div>
         </section>
 
-        {/* Kolom Kanan: Form Login */}
         <section className="w-full lg:w-2/5 flex flex-col items-center justify-center bg-surface-container-low px-4 sm:px-8 lg:px-12 relative py-20 lg:py-0 min-h-screen lg:min-h-full">
           <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10"></div>
           <div className="w-full max-w-md">
@@ -74,21 +88,27 @@ export default function LoginPage() {
                 <p className="text-on-surface-variant font-body text-xs md:text-sm mt-1 md:mt-2">Silakan masuk ke akun Anda</p>
               </div>
 
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                 <div className="space-y-2">
                   <label className="block text-[10px] md:text-xs font-semibold text-on-surface-variant uppercase tracking-wider ml-1">
-                    Username
+                    Email
                   </label>
                   <div className="relative group">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">
-                      person
+                      mail
                     </span>
                     <input
-                      type="text"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 md:py-4 bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-surface-tint/40 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                      placeholder="Masukkan username"
+                      placeholder="Email"
                       required
                     />
                   </div>
@@ -124,9 +144,7 @@ export default function LoginPage() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative flex items-center">
-                      <input type="checkbox" className="peer h-5 w-5 rounded border-outline-variant bg-surface-container-highest text-primary focus:ring-primary/20 transition-all" />
-                    </div>
+                    <input type="checkbox" className="peer h-5 w-5 rounded border-outline-variant bg-surface-container-highest text-primary focus:ring-primary/20 transition-all" />
                     <span className="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Ingat saya</span>
                   </label>
                   <a href="#" className="text-sm font-semibold text-tertiary hover:text-primary transition-colors">Lupa Password?</a>
@@ -134,10 +152,17 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 md:py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
+                  disabled={loading}
+                  className="w-full py-3 md:py-4 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4 disabled:opacity-70"
                 >
-                  Masuk Ke Sistem
-                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                  {loading ? (
+                    <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                  ) : (
+                    <>
+                      Masuk Ke Sistem
+                      <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                    </>
+                  )}
                 </button>
               </form>
 
@@ -150,8 +175,7 @@ export default function LoginPage() {
           </div>
         </section>
       </main>
-<Footer />
-
+      <Footer />
     </div>
   );
 }
