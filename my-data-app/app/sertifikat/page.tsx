@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
-import html2pdf from 'html2pdf.js';
+import React, { useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
+
+// Dynamic import untuk menghindari error "self is not defined"
+const html2pdf = dynamic(() => import('html2pdf.js'), { ssr: false });
 
 // Mapping sabuk ke jabatan
 const jabatanMap: Record<string, string> = {
@@ -62,24 +65,21 @@ export default function SertifikatPage() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
 
-  const previewRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null); // untuk download PDF
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  // Fungsi download PDF
   const handleDownloadPDF = async () => {
-    if (!contentRef.current) return;
+    if (!contentRef.current || !html2pdf) return;
     const element = contentRef.current;
     const opt = {
-      margin: 0,
+      margin: [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (dalam satuan inci)
       filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     await html2pdf().set(opt).from(element).save();
   };
 
-  // Fetch data anggota dan riwayat sertifikat
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
     try {
@@ -105,12 +105,11 @@ export default function SertifikatPage() {
     }
   };
 
-  // Generate nomor sertifikat otomatis
   const generateNoSertifikat = async () => {
     const now = new Date();
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('sertifikat')
       .select('no_sertifikat')
       .like('no_sertifikat', `ISBDS-CS/%/SERT-PPD/${month}/${year}`);
@@ -126,7 +125,6 @@ export default function SertifikatPage() {
     return `ISBDS-CS/${nextNumber}/SERT-PPD/${month}/${year}`;
   };
 
-  // Fungsi utama: generate sertifikat dan simpan/update riwayat sabuk
   const handleGenerate = async () => {
     if (!anggota) {
       alert('Silakan cari anggota terlebih dahulu');
@@ -137,7 +135,6 @@ export default function SertifikatPage() {
       const noSertifikat = await generateNoSertifikat();
       const tanggal = tanggalKenaikan;
 
-      // 1. Simpan ke tabel sertifikat
       const { data: certData, error: certErr } = await supabase
         .from('sertifikat')
         .insert({
@@ -152,10 +149,8 @@ export default function SertifikatPage() {
       if (certErr) throw certErr;
       setGeneratedSertifikat(certData);
 
-      // 2. Update / Insert ke tabel riwayat_sabuk
       const tahun = new Date(tanggal).getFullYear();
 
-      // Cek apakah sudah ada riwayat sabuk dengan tingkat yang sama untuk anggota ini
       const { data: existingRiwayat } = await supabase
         .from('riwayat_sabuk')
         .select('id')
@@ -164,31 +159,23 @@ export default function SertifikatPage() {
         .maybeSingle();
 
       if (existingRiwayat) {
-        // Update
-        const { error: updateErr } = await supabase
+        await supabase
           .from('riwayat_sabuk')
-          .update({
-            no_sertifikat: noSertifikat,
-            tahun: tahun,
-          })
+          .update({ no_sertifikat: noSertifikat, tahun })
           .eq('id', existingRiwayat.id);
-        if (updateErr) throw updateErr;
         alert(`Riwayat sabuk ${selectedBelt} berhasil diperbarui`);
       } else {
-        // Insert baru
-        const { error: insertErr } = await supabase
+        await supabase
           .from('riwayat_sabuk')
           .insert({
             anggota_id: anggota.id,
             tingkat: selectedBelt,
             no_sertifikat: noSertifikat,
-            tahun: tahun,
+            tahun,
           });
-        if (insertErr) throw insertErr;
         alert(`Riwayat sabuk ${selectedBelt} berhasil ditambahkan`);
       }
 
-      // Refresh riwayat sertifikat
       const { data: riwayatBaru } = await supabase
         .from('sertifikat')
         .select('*')
@@ -202,14 +189,11 @@ export default function SertifikatPage() {
     }
   };
 
-  // Fungsi untuk memperbarui riwayat sabuk dari sertifikat yang sudah ada (misal dipilih dari daftar riwayat)
   const handleUpdateRiwayatFromSertifikat = async (sertifikat: Sertifikat) => {
     if (!anggota) return;
     setIsSaving(true);
     try {
       const tahun = new Date(sertifikat.tanggal_kenaikan).getFullYear();
-
-      // Cek apakah riwayat sudah ada
       const { data: existingRiwayat } = await supabase
         .from('riwayat_sabuk')
         .select('id')
@@ -218,27 +202,20 @@ export default function SertifikatPage() {
         .maybeSingle();
 
       if (existingRiwayat) {
-        // Update
-        const { error: updateErr } = await supabase
+        await supabase
           .from('riwayat_sabuk')
-          .update({
-            no_sertifikat: sertifikat.no_sertifikat,
-            tahun: tahun,
-          })
+          .update({ no_sertifikat: sertifikat.no_sertifikat, tahun })
           .eq('id', existingRiwayat.id);
-        if (updateErr) throw updateErr;
         alert(`Riwayat sabuk ${sertifikat.tingkat} berhasil diperbarui`);
       } else {
-        // Insert
-        const { error: insertErr } = await supabase
+        await supabase
           .from('riwayat_sabuk')
           .insert({
             anggota_id: anggota.id,
             tingkat: sertifikat.tingkat,
             no_sertifikat: sertifikat.no_sertifikat,
-            tahun: tahun,
+            tahun,
           });
-        if (insertErr) throw insertErr;
         alert(`Riwayat sabuk ${sertifikat.tingkat} berhasil ditambahkan`);
       }
     } catch (error: any) {
@@ -490,13 +467,18 @@ export default function SertifikatPage() {
                           <div className="flex items-stretch justify-between mt-6 gap-3">
                             <div className="text-center w-[2.5cm]">
                               <div className="border border-black w-[2.2cm] h-[2.8cm] mx-auto overflow-hidden">
-                                <img src={anggota.foto_url || '/images/placeholder-3x4.png'} className="w-full h-full object-cover" alt="Foto" />
+                                <img
+                                  src={anggota.foto_url || '/images/placeholder-3x4.png'}
+                                  className="w-full h-full object-cover"
+                                  alt="Foto"
+                                  onError={(e) => (e.currentTarget.src = '/images/placeholder-3x4.png')}
+                                />
                               </div>
                               <p className="text-[7pt] mt-1">Foto 3x4</p>
                             </div>
-                            <div className="w-[4cm] flex flex-col justify-center">
+                            <div className="w-[3cm] flex flex-col justify-center">
                               <div className="mx-auto">
-                                <QRCodeCanvas value={qrData} size={90} />
+                                <QRCodeCanvas value={qrData} size={70} />
                               </div>
                               <p className="text-[7pt] leading-tight text-center mt-1">
                                 Dokumen ini dicetak resmi oleh<br />
@@ -516,7 +498,7 @@ export default function SertifikatPage() {
                 </div>
               </div>
 
-              {/* Riwayat Sertifikat dengan tombol update */}
+              {/* Riwayat Sertifikat */}
               {anggota && (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                   <div className="p-4 border-b border-slate-100">
