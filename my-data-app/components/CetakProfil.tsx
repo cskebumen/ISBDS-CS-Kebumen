@@ -99,7 +99,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             Keterangan Tentang Data Diri Anggota
           </h4>
 
-          {/* DATA DIRI dengan label lebar tetap 190px */}
+          {/* DATA DIRI dengan lebar label tetap 190px */}
           <div className="space-y-0.5 mb-3 ml-2" style={{ fontSize: `calc(${baseFontSize} - 1pt)` }}>
             <div className="flex">
               <div style={{ width: '190px', fontWeight: 'bold' }}>1. Nama Anggota</div>
@@ -164,7 +164,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           </table>
         </div>
 
-        {/* TANDA TANGAN dengan gambar dan teks lengkap */}
+        {/* TANDA TANGAN dengan gambar */}
         <div className={`flex justify-between items-start px-2 ${marginBottom === 2 ? 'mt-4' : marginBottom === 1.5 ? 'mt-3' : 'mt-2'}`}>
           <div
             style={{
@@ -194,6 +194,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
               src="/images/ketua.png"
               alt="Tanda Tangan Ketua"
               style={{ height: '2.2cm', width: 'auto', marginBottom: '0.5rem' }}
+              onError={(e) => (e.currentTarget.style.display = 'none')}
             />
             <p className="font-bold underline" style={{ fontSize: `calc(${baseFontSize} - 0.5pt)` }}>AHMAD TAUFIK</p>
             <p style={{ fontSize: `calc(${baseFontSize} - 2pt)` }}>NIA. 03.06.02.00003</p>
