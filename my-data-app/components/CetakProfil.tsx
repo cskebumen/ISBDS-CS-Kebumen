@@ -21,16 +21,16 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
     });
     const qrData = `${data.nia}-${data.nama_lengkap}-${data.tempat_lahir || ''}, ${data.tanggal_lahir || ''}-ISBDSCSKBM`;
 
-    // Menentukan skala berdasarkan jumlah riwayat sabuk
     const jumlahRiwayat = riwayat.length;
-    let baseFontSize = '13.5pt';   // default normal
+    let baseFontSize = '13.5pt';
     let lineHeight = 1.3;
     let padding = '5mm 8mm';
     let headerFontSize = '15pt';
     let titleFontSize = '12pt';
     let tableFontSize = '11pt';
     let qrSize = 70;
-    let fotoSize = 'w-32 h-40';
+    let fotoWidth = '3cm';
+    let fotoHeight = '4cm';
     let marginBottom = 2;
 
     if (jumlahRiwayat > 4 && jumlahRiwayat <= 9) {
@@ -41,7 +41,8 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
       titleFontSize = '11pt';
       tableFontSize = '9.5pt';
       qrSize = 65;
-      fotoSize = 'w-30 h-38';
+      fotoWidth = '2.8cm';
+      fotoHeight = '3.7cm';
       marginBottom = 1.5;
     } else if (jumlahRiwayat > 9) {
       baseFontSize = '10pt';
@@ -51,7 +52,8 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
       titleFontSize = '10pt';
       tableFontSize = '8.5pt';
       qrSize = 60;
-      fotoSize = 'w-28 h-36';
+      fotoWidth = '2.5cm';
+      fotoHeight = '3.3cm';
       marginBottom = 1;
     }
 
@@ -75,22 +77,22 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
         <div>
           {/* KOP SURAT */}
           <div className="flex justify-between items-center border-b-4 border-double border-black pb-1 mb-3">
-            <img src="/images/ipsi.png" className="w-16 h-16 object-contain" alt="IPSI" />
+            <img src="/images/ipsi.png" style={{ width: '2.5cm', height: 'auto' }} alt="IPSI" />
             <div className="text-center flex-grow px-2">
-              <h2 className={`font-bold uppercase leading-tight`} style={{ fontSize: headerFontSize }}>
+              <h2 className="font-bold uppercase leading-tight" style={{ fontSize: headerFontSize }}>
                 Institut Seni Bela Diri Silat
               </h2>
-              <h1 className={`font-extrabold uppercase leading-tight`} style={{ fontSize: `calc(${headerFontSize} + 6pt)` }}>
+              <h1 className="font-extrabold uppercase leading-tight" style={{ fontSize: `calc(${headerFontSize} + 6pt)` }}>
                 CIPTA SEJATI
               </h1>
-              <h3 className={`font-bold uppercase leading-tight text-blue-800`} style={{ fontSize: `calc(${headerFontSize} - 2pt)` }}>
+              <h3 className="font-bold uppercase leading-tight text-blue-800" style={{ fontSize: `calc(${headerFontSize} - 2pt)` }}>
                 CABANG KEBUMEN
               </h3>
               <p className="italic" style={{ fontSize: `calc(${baseFontSize} - 2pt)` }}>
                 Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen
               </p>
             </div>
-            <img src="/images/isbds.png" className="w-16 h-16 object-contain" alt="ISBDS" />
+            <img src="/images/isbds.png" style={{ width: '2.5cm', height: 'auto' }} alt="ISBDS" />
           </div>
 
           <h4 className="text-center font-bold underline mb-3 uppercase" style={{ fontSize: titleFontSize }}>
@@ -138,13 +140,24 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           </table>
         </div>
 
-        {/* TANDA TANGAN dan QR - akan menempel di bawah karena flex column */}
+        {/* TANDA TANGAN dan QR */}
         <div className={`flex justify-between items-start px-2 ${marginBottom === 2 ? 'mt-2' : marginBottom === 1.5 ? 'mt-1' : 'mt-0'}`}>
-          <div className={`border border-black ${fotoSize} flex items-center justify-center bg-gray-50 overflow-hidden shadow-sm`}>
+          <div
+            style={{
+              width: fotoWidth,
+              height: fotoHeight,
+              border: '1px solid black',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#f9fafb',
+              overflow: 'hidden',
+            }}
+          >
             {data.foto_url ? (
-              <img src={data.foto_url} alt="Foto anggota" className="w-full h-full object-cover" />
+              <img src={data.foto_url} alt="Foto anggota" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span className="text-[7px] text-gray-400">PAS FOTO 3X4</span>
+              <span style={{ fontSize: '7pt', color: '#9ca3af' }}>PAS FOTO 3X4</span>
             )}
           </div>
           <div className="text-center">
