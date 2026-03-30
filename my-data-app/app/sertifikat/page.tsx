@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
 
-// Mapping sabuk ke jabatan (sesuai dengan LOGIKA_JABATAN di HTML)
+// Mapping sabuk ke jabatan
 const jabatanMap: Record<string, string> = {
   Kuning: 'Pemula',
   Hijau: 'Dasar 1',
@@ -24,7 +24,6 @@ const jabatanMap: Record<string, string> = {
   'Merah 4': 'Guru Besar',
 };
 
-// Daftar sabuk untuk dropdown
 const beltOptions = [
   'Kuning', 'Hijau', 'Biru', 'Cokelat',
   'Hitam 1', 'Hitam 2', 'Hitam 3', 'Hitam 4',
@@ -67,29 +66,15 @@ export default function SertifikatPage() {
     contentRef: previewRef,
     documentTitle: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}`,
     pageStyle: `
-      @page {
-        size: A4 portrait;
-        margin: 0;
-      }
+      @page { size: A4 portrait; margin: 0; }
       @media print {
-        body * {
-          visibility: hidden;
-        }
-        .print-area, .print-area * {
-          visibility: visible;
-        }
-        .print-area {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          background: white;
-        }
+        body * { visibility: hidden; }
+        .print-area, .print-area * { visibility: visible; }
+        .print-area { position: absolute; left: 0; top: 0; width: 100%; background: white; }
       }
     `,
   });
 
-  // Fungsi fetch data anggota berdasarkan NIA
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
     try {
@@ -100,7 +85,6 @@ export default function SertifikatPage() {
         .single();
       if (error) throw error;
       setAnggota(data);
-      // Ambil riwayat sertifikat anggota ini
       const { data: sertifikatData } = await supabase
         .from('sertifikat')
         .select('*')
@@ -116,9 +100,7 @@ export default function SertifikatPage() {
     }
   };
 
-  // Fungsi generate nomor sertifikat otomatis (format: ISBDS-CS/XXXX/SERT-PPD/MM/YYYY)
   const generateNoSertifikat = async () => {
-    // Ambil nomor urut terakhir berdasarkan tahun/bulan
     const now = new Date();
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -138,7 +120,6 @@ export default function SertifikatPage() {
     return `ISBDS-CS/${nextNumber}/SERT-PPD/${month}/${year}`;
   };
 
-  // Handle generate sertifikat
   const handleGenerate = async () => {
     if (!anggota) {
       alert('Silakan cari anggota terlebih dahulu');
@@ -149,7 +130,6 @@ export default function SertifikatPage() {
       const noSertifikat = await generateNoSertifikat();
       const tanggal = tanggalKenaikan;
 
-      // Simpan ke tabel sertifikat
       const { data, error } = await supabase
         .from('sertifikat')
         .insert({
@@ -163,7 +143,6 @@ export default function SertifikatPage() {
 
       if (error) throw error;
       setGeneratedSertifikat(data);
-      // Refresh riwayat
       const { data: riwayatBaru } = await supabase
         .from('sertifikat')
         .select('*')
@@ -178,13 +157,11 @@ export default function SertifikatPage() {
     }
   };
 
-  // Format tanggal Indonesia
   const formatTanggalIndo = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // Data untuk QR code (misal: NIA + Sabuk + No Sertifikat)
   const qrData = generatedSertifikat && anggota
     ? `${anggota.nia}|${generatedSertifikat.tingkat}|${generatedSertifikat.no_sertifikat}`
     : '';
@@ -338,7 +315,6 @@ export default function SertifikatPage() {
                 )}
               </div>
 
-              {/* Tempat Preview Sertifikat */}
               <div className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
                 <div className="p-8 print-area" ref={previewRef}>
                   {generatedSertifikat && anggota ? (
@@ -407,7 +383,7 @@ export default function SertifikatPage() {
                         </div>
                         <div className="w-[4cm] flex flex-col justify-center">
                           <div className="mx-auto">
-                            <QRCode value={qrData} size={90} />
+                            <QRCodeCanvas value={qrData} size={90} />
                           </div>
                           <p className="text-[7pt] leading-tight text-center mt-1">
                             Dokumen ini dicetak resmi oleh<br />
