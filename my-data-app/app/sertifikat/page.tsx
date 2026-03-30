@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import html2pdf from 'html2pdf.js';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
@@ -59,21 +59,23 @@ export default function SertifikatPage() {
   const [tanggalKenaikan, setTanggalKenaikan] = useState(new Date().toISOString().slice(0, 10));
   const [generatedSertifikat, setGeneratedSertifikat] = useState<Sertifikat | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const contentRef = useRef<HTMLDivElement>(null); // ref untuk konten asli (PDF)
+  const displayRef = useRef<HTMLDivElement>(null); // ref untuk tampilan zoom
 
-  const previewRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = useReactToPrint({
-    contentRef: previewRef,
-    documentTitle: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}`,
-    pageStyle: `
-      @page { size: A4 portrait; margin: 0; }
-      @media print {
-        body * { visibility: hidden; }
-        .print-area, .print-area * { visibility: visible; }
-        .print-area { position: absolute; left: 0; top: 0; width: 100%; background: white; }
-      }
-    `,
-  });
+  // Download PDF langsung
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current) return;
+    const element = contentRef.current;
+    const opt = {
+      margin: 0,
+      filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    await html2pdf().set(opt).from(element).save();
+  };
 
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
@@ -299,105 +301,132 @@ export default function SertifikatPage() {
 
             {/* Preview Kanan */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-bold text-lg text-primary flex items-center gap-2">
                   <span className="material-symbols-outlined">visibility</span>
                   Pratinjau E-sertifikat
                 </h3>
-                {generatedSertifikat && (
-                  <button
-                    onClick={handlePrint}
-                    className="flex items-center gap-2 text-primary font-bold text-xs hover:underline"
-                  >
-                    <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                    Download PDF
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {generatedSertifikat && (
+                    <>
+                      <button
+                        onClick={() => setZoomLevel(prev => Math.min(prev + 0.1, 2))}
+                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"
+                        title="Perbesar"
+                      >
+                        <span className="material-symbols-outlined text-sm">zoom_in</span>
+                      </button>
+                      <button
+                        onClick={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))}
+                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"
+                        title="Perkecil"
+                      >
+                        <span className="material-symbols-outlined text-sm">zoom_out</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadPDF}
+                        className="flex items-center gap-2 text-primary font-bold text-xs hover:underline"
+                      >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        Download PDF
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
-                <div className="p-8 print-area" ref={previewRef}>
-                  {generatedSertifikat && anggota ? (
-                    <div className="max-w-3xl mx-auto bg-white p-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-                      {/* Kop */}
-                      <div className="flex justify-between items-center border-b-4 border-double border-black pb-2 mb-4">
-                        <img src="/images/ipsi.png" className="h-16 w-auto" alt="IPSI" />
-                        <div className="text-center flex-grow px-2">
-                          <h2 className="font-bold uppercase text-[14pt] m-0">Institut Seni Bela Diri Silat</h2>
-                          <h1 className="font-extrabold uppercase text-[20pt] m-0">CIPTA SEJATI</h1>
-                          <h3 className="font-bold uppercase text-[12pt] text-blue-700 m-0">CABANG KEBUMEN</h3>
-                          <p className="italic text-[8.5pt] m-0">Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen</p>
-                        </div>
-                        <img src="/images/isbds.png" className="h-16 w-auto" alt="ISBDS" />
-                      </div>
+                <div className="overflow-x-auto p-4" style={{ maxHeight: '80vh' }}>
+                  <div
+                    ref={displayRef}
+                    className="transition-transform duration-200 origin-top"
+                    style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+                  >
+                    {/* Konten asli yang akan di-download (disembunyikan di balik tampilan) */}
+                    <div ref={contentRef} style={{ width: '210mm', margin: '0 auto' }}>
+                      {generatedSertifikat && anggota ? (
+                        <div className="bg-white p-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+                          {/* Kop */}
+                          <div className="flex justify-between items-center border-b-4 border-double border-black pb-2 mb-4">
+                            <img src="/images/ipsi.png" className="h-16 w-auto" alt="IPSI" />
+                            <div className="text-center flex-grow px-2">
+                              <h2 className="font-bold uppercase text-[14pt] m-0">Institut Seni Bela Diri Silat</h2>
+                              <h1 className="font-extrabold uppercase text-[20pt] m-0">CIPTA SEJATI</h1>
+                              <h3 className="font-bold uppercase text-[12pt] text-blue-700 m-0">CABANG KEBUMEN</h3>
+                              <p className="italic text-[8.5pt] m-0">Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen</p>
+                            </div>
+                            <img src="/images/isbds.png" className="h-16 w-auto" alt="ISBDS" />
+                          </div>
 
-                      <div className="text-center mt-4">
-                        <h1 className="text-[34pt] font-serif italic underline mb-1">Sertifikat</h1>
-                        <p className="font-bold text-[10pt] mb-4">Nomor : {generatedSertifikat.no_sertifikat}</p>
-                        <p className="mb-2 text-[12pt]">Diberikan kepada :</p>
-                        <h2 className="font-bold text-[26pt] mb-3 border-b-2 border-gray-200 inline-block px-8 uppercase">
-                          {anggota.nama_lengkap}
-                        </h2>
-                        <div className="w-[450px] mx-auto text-left text-[10pt] leading-relaxed mt-4">
-                          <div className="flex"><div className="w-[180px]">Tempat, Tanggal Lahir</div><div>: {anggota.tempat_lahir}, {anggota.tanggal_lahir}</div></div>
-                          <div className="flex"><div className="w-[180px]">Nomor Induk Anggota</div><div>: {anggota.nia}</div></div>
-                          <div className="flex"><div className="w-[180px]">Anggota Cabang</div><div>: {anggota.cabang || 'KEBUMEN'}</div></div>
-                        </div>
-                        <div className="max-w-[80%] mx-auto mt-8 text-[10.5pt] leading-relaxed">
-                          <p>
-                            Telah menyelesaikan ujian dengan baik dan memenuhi persyaratan untuk lulus ke tingkat{' '}
-                            <b className="text-blue-700">{jabatanMap[generatedSertifikat.tingkat] || generatedSertifikat.tingkat}</b>{' '}
-                            dalam ujian kenaikan tingkat yang diselenggarakan oleh Institut Seni Bela Diri Silat CIPTA SEJATI dan berhak menyandang sabuk{' '}
-                            <b className="text-blue-700">{generatedSertifikat.tingkat}</b>.
-                          </p>
-                        </div>
-                        <p className="text-[11pt] mt-6">Diberikan pada tanggal {formatTanggalIndo(generatedSertifikat.tanggal_kenaikan)}</p>
-                      </div>
+                          <div className="text-center mt-4">
+                            <h1 className="text-[34pt] font-serif italic underline mb-1">Sertifikat</h1>
+                            <p className="font-bold text-[10pt] mb-4">Nomor : {generatedSertifikat.no_sertifikat}</p>
+                            <p className="mb-2 text-[12pt]">Diberikan kepada :</p>
+                            <h2 className="font-bold text-[26pt] mb-3 border-b-2 border-gray-200 inline-block px-8 uppercase">
+                              {anggota.nama_lengkap}
+                            </h2>
+                            <div className="w-[450px] mx-auto text-left text-[10pt] leading-relaxed mt-4">
+                              <div className="flex"><div className="w-[180px]">Tempat, Tanggal Lahir</div><div>: {anggota.tempat_lahir}, {anggota.tanggal_lahir}</div></div>
+                              <div className="flex"><div className="w-[180px]">Nomor Induk Anggota</div><div>: {anggota.nia}</div></div>
+                              <div className="flex"><div className="w-[180px]">Anggota Cabang</div><div>: {anggota.cabang || 'KEBUMEN'}</div></div>
+                            </div>
+                            <div className="max-w-[80%] mx-auto mt-8 text-[10.5pt] leading-relaxed">
+                              <p>
+                                Telah menyelesaikan ujian dengan baik dan memenuhi persyaratan untuk lulus ke tingkat{' '}
+                                <b className="text-blue-700">{jabatanMap[generatedSertifikat.tingkat] || generatedSertifikat.tingkat}</b>{' '}
+                                dalam ujian kenaikan tingkat yang diselenggarakan oleh Institut Seni Bela Diri Silat CIPTA SEJATI dan berhak menyandang sabuk{' '}
+                                <b className="text-blue-700">{generatedSertifikat.tingkat}</b>.
+                              </p>
+                            </div>
+                            <p className="text-[11pt] mt-6">Diberikan pada tanggal {formatTanggalIndo(generatedSertifikat.tanggal_kenaikan)}</p>
+                          </div>
 
-                      <div className="flex justify-between items-end mt-8 px-4">
-                        <div className="text-center min-w-[160px]">
-                          <p className="text-[9pt]">Ketua Cabang Kebumen,</p>
-                          <div className="h-[70px] flex items-center justify-center my-2">
-                            <img src="/images/ketua.png" className="max-h-full" alt="Tanda Tangan" />
+                          <div className="flex justify-between items-end mt-8 px-4">
+                            <div className="text-center min-w-[160px]">
+                              <p className="text-[9pt]">Ketua Cabang Kebumen,</p>
+                              <div className="h-[70px] flex items-center justify-center my-2">
+                                <img src="/images/ketua.png" className="max-h-full" alt="Tanda Tangan" />
+                              </div>
+                              <p className="font-bold text-[9pt] underline">AHMAD TAUFIK</p>
+                              <p className="text-[8pt]">NIA. 03.06.02.000003</p>
+                            </div>
+                            <div className="text-center min-w-[160px]">
+                              <p className="text-[9pt]">Kebumen, {formatTanggalIndo(new Date().toISOString())}</p>
+                              <p className="text-[9pt]">Guru Besar,</p>
+                              <div className="h-[70px] flex items-center justify-center my-2">
+                                <img src="/images/gurubesar.png" className="max-h-full" alt="Tanda Tangan" />
+                              </div>
+                              <p className="font-bold text-[9pt] underline">GB. Ir. SANTOSO</p>
+                              <p className="text-[8pt]">NIA. 02.05.1966.001</p>
+                            </div>
                           </div>
-                          <p className="font-bold text-[9pt] underline">AHMAD TAUFIK</p>
-                          <p className="text-[8pt]">NIA. 03.06.02.000003</p>
-                        </div>
-                        <div className="text-center min-w-[160px]">
-                          <p className="text-[9pt]">Kebumen, {formatTanggalIndo(new Date().toISOString())}</p>
-                          <p className="text-[9pt]">Guru Besar,</p>
-                          <div className="h-[70px] flex items-center justify-center my-2">
-                            <img src="/images/gurubesar.png" className="max-h-full" alt="Tanda Tangan" />
-                          </div>
-                          <p className="font-bold text-[9pt] underline">GB. Ir. SANTOSO</p>
-                          <p className="text-[8pt]">NIA. 02.05.1966.001</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-stretch justify-between mt-6 gap-3">
-                        <div className="text-center w-[2.5cm]">
-                          <div className="border border-black w-[2.2cm] h-[2.8cm] mx-auto overflow-hidden">
-                            <img src={anggota.foto_url || '/images/placeholder-3x4.png'} className="w-full h-full object-cover" alt="Foto" />
+                          <div className="flex items-stretch justify-between mt-6 gap-3">
+                            <div className="text-center w-[2.5cm]">
+                              <div className="border border-black w-[2.2cm] h-[2.8cm] mx-auto overflow-hidden">
+                                <img src={anggota.foto_url || '/images/placeholder-3x4.png'} className="w-full h-full object-cover" alt="Foto" />
+                              </div>
+                              <p className="text-[7pt] mt-1">Foto 3x4</p>
+                            </div>
+                            <div className="w-[4cm] flex flex-col justify-center">
+                              <div className="mx-auto">
+                                <QRCodeCanvas value={qrData} size={90} />
+                              </div>
+                              <p className="text-[7pt] leading-tight text-center mt-1">
+                                Dokumen ini dicetak resmi oleh<br />
+                                <span className="font-bold">ISBDS CS Cabang Kebumen</span>
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[7pt] mt-1">Foto 3x4</p>
                         </div>
-                        <div className="w-[4cm] flex flex-col justify-center">
-                          <div className="mx-auto">
-                            <QRCodeCanvas value={qrData} size={90} />
-                          </div>
-                          <p className="text-[7pt] leading-tight text-center mt-1">
-                            Dokumen ini dicetak resmi oleh<br />
-                            <span className="font-bold">ISBDS CS Cabang Kebumen</span>
-                          </p>
+                      ) : (
+                        <div className="text-center py-24 text-slate-400">
+                          <span className="material-symbols-outlined text-6xl">description</span>
+                          <p className="mt-2">Belum ada sertifikat yang di-generate</p>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="text-center py-24 text-slate-400">
-                      <span className="material-symbols-outlined text-6xl">description</span>
-                      <p className="mt-2">Belum ada sertifikat yang di-generate</p>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
