@@ -169,6 +169,11 @@ export default function DataIndukPage() {
     } catch (err: any) {
       alert("Gagal: " + err.message);
     } finally { setIsSaving(false); }
+
+const handleRemoveRiwayat = (index: number) => {
+  setRiwayatFields(prev => prev.filter((_, i) => i !== index));
+};
+
   };
 
   return (
@@ -357,16 +362,58 @@ export default function DataIndukPage() {
                   <h4 className="font-black text-[10px] uppercase tracking-wider flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">military_tech</span> Riwayat Kenaikan Sabuk</h4>
                   <button type="button" onClick={() => setRiwayatFields([...riwayatFields, { tingkat: '', no_sertifikat: '', tahun: '' }])} className="text-[9px] font-bold text-blue-700">+ TAMBAH BARIS</button>
                 </div>
-                {riwayatFields.map((field, idx) => (
-                  <div key={idx} className="flex gap-2 mb-2">
-                    <select value={field.tingkat} onChange={e => { const u = [...riwayatFields]; u[idx].tingkat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]">
-                      <option value="">Pilih Sabuk</option>
-                      {['Kuning','Hijau','Biru','Cokelat','Hitam 1','Hitam 2','Hitam 3','Hitam 4','Merah 1','Merah 2','Merah 3','Merah 4'].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <input placeholder="No. Sertifikat" value={field.no_sertifikat} onChange={e => { const u = [...riwayatFields]; u[idx].no_sertifikat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]" />
-                    <input placeholder="Tahun" value={field.tahun} onChange={e => { const u = [...riwayatFields]; u[idx].tahun = e.target.value; setRiwayatFields(u); }} className="w-16 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]" />
-                  </div>
-                ))}
+{riwayatFields.map((field, idx) => (
+  <div key={idx} className="flex gap-2 mb-2 items-center">
+    <select
+      value={field.tingkat}
+      onChange={e => {
+        const u = [...riwayatFields];
+        u[idx].tingkat = e.target.value;
+        setRiwayatFields(u);
+      }}
+      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+    >
+      <option value="">Pilih Sabuk</option>
+      {['Kuning','Hijau','Biru','Cokelat','Hitam 1','Hitam 2','Hitam 3','Hitam 4','Merah 1','Merah 2','Merah 3','Merah 4'].map(s => (
+        <option key={s} value={s}>{s}</option>
+      ))}
+    </select>
+
+    <input
+      placeholder="No. Sertifikat"
+      value={field.no_sertifikat}
+      onChange={e => {
+        const u = [...riwayatFields];
+        u[idx].no_sertifikat = e.target.value;
+        setRiwayatFields(u);
+      }}
+      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+    />
+
+    <input
+      placeholder="Tahun"
+      value={field.tahun}
+      onChange={e => {
+        const u = [...riwayatFields];
+        u[idx].tahun = e.target.value;
+        setRiwayatFields(u);
+      }}
+      className="w-16 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+    />
+
+    {/* Tombol hapus - hanya tampil jika lebih dari 1 baris */}
+    {riwayatFields.length > 1 && (
+      <button
+        type="button"
+        onClick={() => handleRemoveRiwayat(idx)}
+        className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+        title="Hapus baris"
+      >
+        <span className="material-symbols-outlined text-[18px]">delete</span>
+      </button>
+    )}
+  </div>
+))}
               </div>
 
               <button type="submit" disabled={isSaving} className="w-full py-4 bg-blue-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">
