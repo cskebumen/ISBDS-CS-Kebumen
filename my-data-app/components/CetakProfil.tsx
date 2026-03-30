@@ -102,35 +102,35 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           {/* DATA DIRI dengan lebar label tetap 190px */}
           <div className="space-y-0.5 mb-3 ml-2" style={{ fontSize: `calc(${baseFontSize} - 1pt)` }}>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>1. Nama Anggota</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>1. Nama Anggota</div>
               <div>: {data.nama_lengkap || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>2. Nomor Induk Anggota (NIA)</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>2. Nomor Induk Anggota (NIA)</div>
               <div className="font-mono">: {data.nia || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>3. Tempat, Tanggal Lahir</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>3. Tempat, Tanggal Lahir</div>
               <div>: {data.tempat_lahir || '-'}, {data.tanggal_lahir || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>4. Jenis Kelamin</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>4. Jenis Kelamin</div>
               <div>: {data.jenis_kelamin || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>5. Alamat Lengkap</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>5. Alamat Lengkap</div>
               <div className="flex-1">: {data.alamat_lengkap || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>6. Ranting / Unit</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>6. Ranting / Unit</div>
               <div>: {data.ranting || '-'}</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>7. Cabang</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>7. Cabang</div>
               <div>: KEBUMEN</div>
             </div>
             <div className="flex">
-              <div style={{ width: '220px', fontWeight: 'bold' }}>8. No. HP / WhatsApp</div>
+              <div style={{ width: '260px', fontWeight: 'bold' }}>8. No. HP / WhatsApp</div>
               <div>: {data.no_hp || '-'}</div>
             </div>
           </div>
@@ -190,12 +190,21 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             <p style={{ fontSize: `calc(${baseFontSize} - 1pt)`, fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Ketua Cabang ISBDS Cipta Sejati Kebumen
             </p>
-            <img
-              src="/images/ketua.png"
-              alt="Tanda Tangan Ketua"
-              style={{ height: '2.2cm', width: 'auto', marginBottom: '0.5rem' }}
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
+<div className="flex justify-center w-full"> 
+    <img
+      src="/images/ketua.png"
+      alt="Tanda Tangan Ketua"
+      style={{ 
+        height: '2.2cm', 
+        width: 'auto', 
+        marginBottom: '0.5rem',
+        display: 'block', // Pastikan display block
+        marginLeft: 'auto', // Margin kiri otomatis
+        marginRight: 'auto' // Margin kanan otomatis
+      }}
+      onError={(e) => (e.currentTarget.style.display = 'none')}
+    />
+  </div>
             <p className="font-bold underline" style={{ fontSize: `calc(${baseFontSize} - 0.5pt)` }}>AHMAD TAUFIK</p>
             <p style={{ fontSize: `calc(${baseFontSize} - 2pt)` }}>NIA. 03.06.02.00003</p>
           </div>
