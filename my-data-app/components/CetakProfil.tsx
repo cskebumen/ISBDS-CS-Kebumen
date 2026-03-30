@@ -56,7 +56,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           </h4>
 
           {/* DATA DIRI */}
-          <div className="space-y-0.5 text-[9pt] mb-3 ml-2">
+          <div className="space-y-0.5 text-[10.5pt] mb-3 ml-2">
             <div className="flex"><div className="w-52 font-bold">1. Nama Anggota</div><div>: {data.nama_lengkap || '-'}</div></div>
             <div className="flex"><div className="w-52 font-bold">2. Nomor Induk Anggota (NIA)</div><div className="font-mono">: {data.nia || '-'}</div></div>
             <div className="flex"><div className="w-52 font-bold">3. Tempat, Tanggal Lahir</div><div>: {data.tempat_lahir || '-'}, {data.tanggal_lahir || '-'}</div></div>
