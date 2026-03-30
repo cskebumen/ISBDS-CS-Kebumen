@@ -37,10 +37,10 @@ export async function proxy(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (!session && !req.nextUrl.pathname.startsWith('/login')) {
-    const redirectUrl = new URL('/login', req.url)
-    return NextResponse.redirect(redirectUrl)
-  }
+//  if (!session && !req.nextUrl.pathname.startsWith('/login')) {
+//    const redirectUrl = new URL('/login', req.url)
+//    return NextResponse.redirect(redirectUrl)
+//  }
 
   let userRole = 'anggota'
   let userNia = null
