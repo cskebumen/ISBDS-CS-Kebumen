@@ -480,7 +480,7 @@ const handleDownloadPDF = async () => {
                             </div>
                             <div className="w-max flex flex-col justify-center">
                               <div className="mx-auto">
-                                <QRCodeCanvas value={qrData} size={70} />
+                                <QRCodeCanvas value={qrData} size={60} />
                               </div>
                               <p className="text-[7pt] leading-tight text-center mt-1 whitespace-nowrap">
                                 Dokumen ini dicetak resmi oleh<br />
