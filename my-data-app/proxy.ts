@@ -35,13 +35,16 @@ export async function proxy(req: NextRequest) {
     }
   )
 
+  // Refresh session (penting agar cookie terbaru terbaca)
   const { data: { session } } = await supabase.auth.getSession()
 
-//  if (!session && !req.nextUrl.pathname.startsWith('/login')) {
-//    const redirectUrl = new URL('/login', req.url)
-//    return NextResponse.redirect(redirectUrl)
-//  }
+  // Jika tidak ada session dan bukan halaman login, redirect ke login
+  if (!session && !req.nextUrl.pathname.startsWith('/login')) {
+    const redirectUrl = new URL('/login', req.url)
+    return NextResponse.redirect(redirectUrl)
+  }
 
+  // Ambil role, nia, ranting dari user_profil (jika session ada)
   let userRole = 'anggota'
   let userNia = null
   let userRanting = null
@@ -59,6 +62,7 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // Simpan ke header untuk digunakan di server components (opsional)
   const requestHeaders = new Headers(req.headers)
   requestHeaders.set('x-user-role', userRole)
   requestHeaders.set('x-user-nia', userNia || '')
@@ -70,6 +74,7 @@ export async function proxy(req: NextRequest) {
     },
   })
 
+  // Proteksi rute berdasarkan role
   const pathname = req.nextUrl.pathname
 
   if (pathname.startsWith('/kelola-user') && userRole !== 'admin') {
