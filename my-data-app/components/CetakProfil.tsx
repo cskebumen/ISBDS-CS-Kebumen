@@ -146,11 +146,20 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
         </div>
 
         {/* FOOTER BARCODE */}
-        <div className="mt-16 pt-4 border-t border-gray-200 flex items-center justify-between">
-          <div className="scale-75 origin-left">
-            <Barcode value={data.nia || '0000'} height={40} fontSize={12} margin={0} />
-          </div>
-
+<div className="mt-16 pt-4 border-t border-gray-200 flex items-center justify-between">
+  <div className="scale-75 origin-left">
+    {/* Menggunakan format data gabungan */}
+    <Barcode 
+      value={`${data.nia}-${data.nama_lengkap}-${data.tempat_lahir || ''}, ${data.tanggal_lahir || ''}-ISBDSCSKBM`} 
+      format="CODE128"
+      height={50} 
+      width={2}
+      fontSize={10} 
+      margin={0} 
+      displayValue={true}
+    />
+  </div>
+</div>
           <p className="text-[9px] text-gray-400 text-right leading-tight">
             Dokumen ini dihasilkan secara otomatis oleh
             <br />
