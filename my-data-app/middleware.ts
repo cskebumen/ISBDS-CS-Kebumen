@@ -1,42 +1,76 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
 
-  // Refresh session jika ada
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
+
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Jika tidak ada session, redirect ke login (kecuali halaman login)
+  // Jika tidak ada session dan bukan di halaman login, redirect ke login
   if (!session && !req.nextUrl.pathname.startsWith('/login')) {
     const redirectUrl = new URL('/login', req.url)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Ambil role dan nia dari user_profil
+  // Jika ada session, ambil role dari user_profil
   let userRole = 'anggota'
   let userNia = null
+  let userRanting = null
+
   if (session) {
-    const { data: userData } = await supabase
+    const { data: profile } = await supabase
       .from('user_profil')
-      .select('role, nia')
+      .select('role, nia, ranting')
       .eq('id', session.user.id)
       .single()
-    if (userData) {
-      userRole = userData.role
-      userNia = userData.nia
+    if (profile) {
+      userRole = profile.role
+      userNia = profile.nia
+      userRanting = profile.ranting
     }
   }
 
-  // Simpan role dan nia di header untuk digunakan di komponen (opsional)
+  // Simpan role, nia, ranting di header untuk digunakan di server components
   const requestHeaders = new Headers(req.headers)
   requestHeaders.set('x-user-role', userRole)
   requestHeaders.set('x-user-nia', userNia || '')
+  requestHeaders.set('x-user-ranting', userRanting || '')
 
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
+  response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
   })
 
   // Proteksi rute berdasarkan role
