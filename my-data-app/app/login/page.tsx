@@ -35,7 +35,7 @@ export default function LoginPage() {
       } else {
         alert(`✅ BERHASIL! Redirect ke dashboard...`);
         console.log('Login success:', data);
-        router.push('/dashboard');
+  window.location.href = '/dashboard';
       }
     } catch (err: any) {
       alert(`⚠️ ERROR TAK TERDUGA: ${err.message}`);
