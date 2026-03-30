@@ -13,32 +13,37 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  console.log('🚀 Login attempt with:', email);
+    // Alert sebelum mulai
+    alert('🔐 Mencoba login...');
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    console.log('📦 Response:', { data, error });
-
-    if (error) throw error;
-
-    console.log('✅ Login success, redirecting...');
-    router.push('/dashboard');
-  } catch (err: any) {
-    console.error('❌ Login error:', err);
-    setError(err.message || 'Login gagal. Periksa email dan password Anda.');
-  } finally {
-    setLoading(false);
-  }
-};
+      // Alert setelah response
+      if (error) {
+        alert(`❌ GAGAL: ${error.message}`);
+        setError(error.message);
+        console.error('Login error:', error);
+      } else {
+        alert(`✅ BERHASIL! Redirect ke dashboard...`);
+        console.log('Login success:', data);
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      alert(`⚠️ ERROR TAK TERDUGA: ${err.message}`);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
