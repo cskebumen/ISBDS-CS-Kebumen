@@ -31,7 +31,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           padding: '5mm 8mm',
           boxSizing: 'border-box',
           margin: '0 auto',
-          fontSize: '10pt',
+          fontSize: '11pt',
           lineHeight: '1.3',
           display: 'flex',
           flexDirection: 'column',
@@ -43,15 +43,15 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
           <div className="flex justify-between items-center border-b-4 border-double border-black pb-1 mb-3">
             <img src="/images/ipsi.png" className="w-16 h-16 object-contain" alt="IPSI" />
             <div className="text-center flex-grow px-2">
-              <h2 className="font-bold uppercase text-[12pt] leading-tight">Institut Seni Bela Diri Silat</h2>
+              <h2 className="font-bold uppercase text-[13pt] leading-tight">Institut Seni Bela Diri Silat</h2>
               <h1 className="font-extrabold uppercase text-[18pt] leading-tight">CIPTA SEJATI</h1>
-              <h3 className="font-bold uppercase text-[10pt] leading-tight text-blue-800">CABANG KEBUMEN</h3>
-              <p className="italic text-[7pt]">Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen</p>
+              <h3 className="font-bold uppercase text-[11pt] leading-tight text-blue-800">CABANG KEBUMEN</h3>
+              <p className="italic text-[10pt]">Alamat: Ds. Tlepok Rt 03/ Rw 01, Kec. Karangsambung, Kab. Kebumen</p>
             </div>
             <img src="/images/isbds.png" className="w-16 h-16 object-contain" alt="ISBDS" />
           </div>
 
-          <h4 className="text-center font-bold underline mb-3 uppercase text-[10pt]">
+          <h4 className="text-center font-bold underline mb-3 uppercase text-[12pt]">
             Keterangan Tentang Data Diri Anggota
           </h4>
 
@@ -67,8 +67,8 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             <div className="flex"><div className="w-52 font-bold">8. No. HP / WhatsApp</div><div>: {data.no_hp || '-'}</div></div>
           </div>
 
-          <p className="font-bold text-[9pt] mb-1">9. Riwayat Sabuk</p>
-          <table className="w-full border-collapse border border-black text-[8.5pt] mb-2">
+          <p className="font-bold text-[10pt] mb-1">9. Riwayat Sabuk</p>
+          <table className="w-full border-collapse border border-black text-[9.5pt] mb-2">
             <thead className="bg-gray-100 uppercase font-bold text-center">
               <tr>
                 <th className="border border-black p-1 w-8">No</th>
@@ -82,8 +82,8 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
                 riwayat.map((r, i) => (
                   <tr key={i} className="text-center">
                     <td className="border border-black p-1">{i + 1}</td>
-                    <td className="border border-black p-1 text-left px-2 italic font-semibold">{r.tingkat}</td>
-                    <td className="border border-black p-1 text-[8pt]">{r.no_sertifikat}</td>
+                    <td className="border border-black p-1 text-left px-2  font-semibold">{r.tingkat}</td>
+                    <td className="border border-black p-1 text-[9pt]">{r.no_sertifikat}</td>
                     <td className="border border-black p-1">{r.tahun}</td>
                   </tr>
                 ))
@@ -102,7 +102,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             {data.foto_url ? (
               <img src={data.foto_url} alt="Foto anggota" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-[7px] text-gray-400">PAS FOTO 3X4</span>
+              <span className="text-[8px] text-gray-400">PAS FOTO 3X4</span>
             )}
           </div>
           <div className="text-center">
@@ -130,9 +130,9 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
             />
           </div>
           <p className="text-[7px] text-gray-400 text-right leading-tight">
-            Dokumen ini dihasilkan secara otomatis oleh
+            Dokumen ini dicetak secara otomatis oleh
             <br />
-            <span className="font-bold uppercase">SIM ISBDS Cipta Sejati Cabang Kebumen</span>
+            <span className="font-bold uppercase">ISBDS Cipta Sejati Cabang Kebumen</span>
           </p>
         </div>
       </div>
