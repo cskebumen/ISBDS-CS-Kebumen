@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import html2pdf from 'html2pdf.js';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
@@ -60,10 +60,12 @@ export default function SertifikatPage() {
   const [generatedSertifikat, setGeneratedSertifikat] = useState<Sertifikat | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const contentRef = useRef<HTMLDivElement>(null); // ref untuk konten asli (PDF)
-  const displayRef = useRef<HTMLDivElement>(null); // ref untuk tampilan zoom
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Download PDF langsung
+  const previewRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null); // untuk download PDF
+
+  // Fungsi download PDF
   const handleDownloadPDF = async () => {
     if (!contentRef.current) return;
     const element = contentRef.current;
@@ -77,6 +79,7 @@ export default function SertifikatPage() {
     await html2pdf().set(opt).from(element).save();
   };
 
+  // Fetch data anggota dan riwayat sertifikat
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
     try {
@@ -102,6 +105,7 @@ export default function SertifikatPage() {
     }
   };
 
+  // Generate nomor sertifikat otomatis
   const generateNoSertifikat = async () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -122,6 +126,7 @@ export default function SertifikatPage() {
     return `ISBDS-CS/${nextNumber}/SERT-PPD/${month}/${year}`;
   };
 
+  // Fungsi utama: generate sertifikat dan simpan/update riwayat sabuk
   const handleGenerate = async () => {
     if (!anggota) {
       alert('Silakan cari anggota terlebih dahulu');
@@ -132,7 +137,8 @@ export default function SertifikatPage() {
       const noSertifikat = await generateNoSertifikat();
       const tanggal = tanggalKenaikan;
 
-      const { data, error } = await supabase
+      // 1. Simpan ke tabel sertifikat
+      const { data: certData, error: certErr } = await supabase
         .from('sertifikat')
         .insert({
           anggota_id: anggota.id,
@@ -143,19 +149,102 @@ export default function SertifikatPage() {
         .select()
         .single();
 
-      if (error) throw error;
-      setGeneratedSertifikat(data);
+      if (certErr) throw certErr;
+      setGeneratedSertifikat(certData);
+
+      // 2. Update / Insert ke tabel riwayat_sabuk
+      const tahun = new Date(tanggal).getFullYear();
+
+      // Cek apakah sudah ada riwayat sabuk dengan tingkat yang sama untuk anggota ini
+      const { data: existingRiwayat } = await supabase
+        .from('riwayat_sabuk')
+        .select('id')
+        .eq('anggota_id', anggota.id)
+        .eq('tingkat', selectedBelt)
+        .maybeSingle();
+
+      if (existingRiwayat) {
+        // Update
+        const { error: updateErr } = await supabase
+          .from('riwayat_sabuk')
+          .update({
+            no_sertifikat: noSertifikat,
+            tahun: tahun,
+          })
+          .eq('id', existingRiwayat.id);
+        if (updateErr) throw updateErr;
+        alert(`Riwayat sabuk ${selectedBelt} berhasil diperbarui`);
+      } else {
+        // Insert baru
+        const { error: insertErr } = await supabase
+          .from('riwayat_sabuk')
+          .insert({
+            anggota_id: anggota.id,
+            tingkat: selectedBelt,
+            no_sertifikat: noSertifikat,
+            tahun: tahun,
+          });
+        if (insertErr) throw insertErr;
+        alert(`Riwayat sabuk ${selectedBelt} berhasil ditambahkan`);
+      }
+
+      // Refresh riwayat sertifikat
       const { data: riwayatBaru } = await supabase
         .from('sertifikat')
         .select('*')
         .eq('anggota_id', anggota.id)
         .order('tanggal_kenaikan', { ascending: false });
       setRiwayatSertifikat(riwayatBaru || []);
-      alert('Sertifikat berhasil disimpan');
     } catch (error: any) {
       alert('Gagal menyimpan: ' + error.message);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Fungsi untuk memperbarui riwayat sabuk dari sertifikat yang sudah ada (misal dipilih dari daftar riwayat)
+  const handleUpdateRiwayatFromSertifikat = async (sertifikat: Sertifikat) => {
+    if (!anggota) return;
+    setIsSaving(true);
+    try {
+      const tahun = new Date(sertifikat.tanggal_kenaikan).getFullYear();
+
+      // Cek apakah riwayat sudah ada
+      const { data: existingRiwayat } = await supabase
+        .from('riwayat_sabuk')
+        .select('id')
+        .eq('anggota_id', anggota.id)
+        .eq('tingkat', sertifikat.tingkat)
+        .maybeSingle();
+
+      if (existingRiwayat) {
+        // Update
+        const { error: updateErr } = await supabase
+          .from('riwayat_sabuk')
+          .update({
+            no_sertifikat: sertifikat.no_sertifikat,
+            tahun: tahun,
+          })
+          .eq('id', existingRiwayat.id);
+        if (updateErr) throw updateErr;
+        alert(`Riwayat sabuk ${sertifikat.tingkat} berhasil diperbarui`);
+      } else {
+        // Insert
+        const { error: insertErr } = await supabase
+          .from('riwayat_sabuk')
+          .insert({
+            anggota_id: anggota.id,
+            tingkat: sertifikat.tingkat,
+            no_sertifikat: sertifikat.no_sertifikat,
+            tahun: tahun,
+          });
+        if (insertErr) throw insertErr;
+        alert(`Riwayat sabuk ${sertifikat.tingkat} berhasil ditambahkan`);
+      }
+    } catch (error: any) {
+      alert('Gagal menyimpan riwayat: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -280,7 +369,7 @@ export default function SertifikatPage() {
                         className="w-full py-3 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                       >
                         <span className="material-symbols-outlined text-lg">auto_awesome</span>
-                        {isGenerating ? 'Memproses...' : 'Generate Sertifikat'}
+                        {isGenerating ? 'Memproses...' : 'Generate & Simpan Riwayat'}
                       </button>
                     </>
                   )}
@@ -292,7 +381,7 @@ export default function SertifikatPage() {
                   <div>
                     <p className="text-xs font-bold text-blue-800 uppercase">Panduan Cepat</p>
                     <p className="text-[11px] text-blue-700/80 leading-relaxed">
-                      Sertifikat yang telah di-generate akan otomatis tersimpan di arsip digital anggota dan dapat diakses melalui portal publik untuk verifikasi keaslian.
+                      Sertifikat yang di-generate akan otomatis menyimpan/memperbarui riwayat sabuk anggota.
                     </p>
                   </div>
                 </div>
@@ -338,11 +427,8 @@ export default function SertifikatPage() {
               <div className="relative bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
                 <div className="overflow-x-auto p-4" style={{ maxHeight: '80vh' }}>
                   <div
-                    ref={displayRef}
-                    className="transition-transform duration-200 origin-top"
-                    style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+                    style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                   >
-                    {/* Konten asli yang akan di-download (disembunyikan di balik tampilan) */}
                     <div ref={contentRef} style={{ width: '210mm', margin: '0 auto' }}>
                       {generatedSertifikat && anggota ? (
                         <div className="bg-white p-6" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -430,7 +516,7 @@ export default function SertifikatPage() {
                 </div>
               </div>
 
-              {/* Riwayat Sertifikat */}
+              {/* Riwayat Sertifikat dengan tombol update */}
               {anggota && (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                   <div className="p-4 border-b border-slate-100">
@@ -459,16 +545,27 @@ export default function SertifikatPage() {
                               <td className="px-4 py-3 text-sm">{s.tingkat}</td>
                               <td className="px-4 py-3 text-sm">{formatTanggalIndo(s.tanggal_kenaikan)}</td>
                               <td className="px-4 py-3 text-center">
-                                <button
-                                  onClick={() => {
-                                    setGeneratedSertifikat(s);
-                                    setSelectedBelt(s.tingkat);
-                                    setTanggalKenaikan(s.tanggal_kenaikan);
-                                  }}
-                                  className="text-blue-600 hover:bg-blue-50 p-1 rounded"
-                                >
-                                  <span className="material-symbols-outlined text-sm">visibility</span>
-                                </button>
+                                <div className="flex justify-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setGeneratedSertifikat(s);
+                                      setSelectedBelt(s.tingkat);
+                                      setTanggalKenaikan(s.tanggal_kenaikan);
+                                    }}
+                                    className="text-blue-600 hover:bg-blue-50 p-1 rounded"
+                                    title="Tampilkan"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">visibility</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateRiwayatFromSertifikat(s)}
+                                    disabled={isSaving}
+                                    className="text-green-600 hover:bg-green-50 p-1 rounded"
+                                    title="Update riwayat sabuk"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">save</span>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))
