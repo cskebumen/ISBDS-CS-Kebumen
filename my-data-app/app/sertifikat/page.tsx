@@ -466,8 +466,8 @@ const handleDownloadPDF = async () => {
                             </div>
                           </div>
 
-                          <div className="flex items-stretch justify-between mt-6 gap-3 px-4">
-                            <div className="text-center w-[2.5cm]">
+                          <div className="flex items-center justify-between mt-6 gap-6 px-4">
+                            <div className="text-center w-[2.5cm] flex-shrink-0">
                               <div className="border border-black w-[2.2cm] h-[2.8cm] mx-auto overflow-hidden">
                                 <img
                                   src={anggota.foto_url || '/images/placeholder-3x4.png'}
@@ -478,11 +478,11 @@ const handleDownloadPDF = async () => {
                               </div>
                               <p className="text-[7pt] mt-1">Foto 3x4</p>
                             </div>
-                            <div className="w-[3cm] flex flex-col justify-center">
+                            <div className="w-max flex flex-col justify-center">
                               <div className="mx-auto">
                                 <QRCodeCanvas value={qrData} size={70} />
                               </div>
-                              <p className="text-[7pt] leading-tight text-center mt-1">
+                              <p className="text-[7pt] leading-tight text-center mt-1 whitespace-nowrap">
                                 Dokumen ini dicetak resmi oleh<br />
                                 <span className="font-bold">ISBDS CS Cabang Kebumen</span>
                               </p>
