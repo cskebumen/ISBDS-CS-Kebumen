@@ -1,5 +1,5 @@
 import React from 'react';
-import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Riwayat {
   tingkat: string;
@@ -19,6 +19,7 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
       month: 'long',
       year: 'numeric',
     });
+const qrData = `${data.nia}-${data.nama_lengkap}-${data.tempat_lahir || ''}, ${data.tanggal_lahir || ''}-ISBDSCSKBM`;
 
     return (
       <div
@@ -147,18 +148,23 @@ export const CetakProfil = React.forwardRef<HTMLDivElement, CetakProfilProps>(
 
         {/* FOOTER BARCODE */}
 <div className="mt-16 pt-4 border-t border-gray-200 flex items-center justify-between">
-  <div className="scale-75 origin-left">
-    {/* Menggunakan format data gabungan */}
-    <Barcode 
-      value={`${data.nia}-${data.nama_lengkap}-${data.tempat_lahir || ''}, ${data.tanggal_lahir || ''}-ISBDSCSKBM`} 
-      format="CODE128"
-      height={50} 
-      width={1}
-      fontSize={10} 
-      margin={0} 
-      displayValue={true}
+  <div className="flex flex-col items-center gap-2">
+    {/* Menggunakan QRCodeSVG agar hasil cetak tajam (vektor) */}
+    <QRCodeSVG 
+      value={qrData}
+      size={70}           // Ukuran QR Code
+      level={"H"}         // Error correction level High (tetap bisa discan meski agak kotor/rusak)
+      includeMargin={false}
+      imageSettings={{    // Opsional: Jika ingin tambah logo kecil di tengah QR
+        src: "images/isbds.png",
+        x: undefined,
+        y: undefined,
+        height: 15,
+        width: 15,
+        excavate: true,
+      }}
     />
-</div>
+  </div>
           <p className="text-[9px] text-gray-400 text-right leading-tight">
             Dokumen ini dihasilkan secara otomatis oleh
             <br />
