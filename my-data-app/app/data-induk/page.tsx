@@ -111,6 +111,10 @@ export default function DataIndukPage() {
     setDetailRiwayat(data || []);
   };
 
+const handleRemoveRiwayat = (index: number) => {
+  setRiwayatFields(prev => prev.filter((_, i) => i !== index));
+};
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.nama_lengkap && formData.nama_lengkap.length > 25) {
@@ -169,11 +173,6 @@ export default function DataIndukPage() {
     } catch (err: any) {
       alert("Gagal: " + err.message);
     } finally { setIsSaving(false); }
-
-const handleRemoveRiwayat = (index: number) => {
-  setRiwayatFields(prev => prev.filter((_, i) => i !== index));
-};
-
   };
 
   return (
