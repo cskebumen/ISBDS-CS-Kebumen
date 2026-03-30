@@ -347,7 +347,7 @@ export default function DataIndukPage() {
                 <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor WhatsApp</label><input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" /></div>
                 <div><label className="text-[10px] font-bold text-slate-400 uppercase">Status Anggota</label>
                   <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none">
-                    <option value="Aktif">Aktif</option><option value="Mangkir">Mangkir</option><option value="Alumni">Alumni</option>
+                    <option value="Aktif">Aktif</option><option value="Istirahat">Istirahat</option><option value="Keluar">Keluar</option>
                   </select>
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default function DataIndukPage() {
                   <div key={idx} className="flex gap-2 mb-2">
                     <select value={field.tingkat} onChange={e => { const u = [...riwayatFields]; u[idx].tingkat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]">
                       <option value="">Pilih Sabuk</option>
-                      {['Kuning','Hijau','Biru','Cokelat','Hitam 1'].map(s => <option key={s} value={s}>{s}</option>)}
+                      {['Kuning','Hijau','Biru','Cokelat','Hitam 1','Hitam 2','Hitam 3','Hitam 4','Merah 1','Merah 2','Merah 3','Merah 4'].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <input placeholder="No. Sertifikat" value={field.no_sertifikat} onChange={e => { const u = [...riwayatFields]; u[idx].no_sertifikat = e.target.value; setRiwayatFields(u); }} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]" />
                     <input placeholder="Tahun" value={field.tahun} onChange={e => { const u = [...riwayatFields]; u[idx].tahun = e.target.value; setRiwayatFields(u); }} className="w-16 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]" />
