@@ -13,25 +13,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  console.log('🚀 Login attempt with:', email);
 
-      if (error) throw error;
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login gagal. Periksa email dan password Anda.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    console.log('📦 Response:', { data, error });
+
+    if (error) throw error;
+
+    console.log('✅ Login success, redirecting...');
+    router.push('/dashboard');
+  } catch (err: any) {
+    console.error('❌ Login error:', err);
+    setError(err.message || 'Login gagal. Periksa email dan password Anda.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
