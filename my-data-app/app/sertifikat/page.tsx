@@ -67,18 +67,20 @@ export default function SertifikatPage() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const handleDownloadPDF = async () => {
-    if (!contentRef.current || !html2pdf) return;
-    const element = contentRef.current;
-    const opt = {
-      margin: [0.5, 0.5, 0.5, 0.5], // top, right, bottom, left (dalam satuan inci)
-      filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, letterRendering: true },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    await html2pdf().set(opt).from(element).save();
+const handleDownloadPDF = async () => {
+  if (!contentRef.current) return;
+  const element = contentRef.current;
+  const opt = {
+    margin: [0.3, 0.3, 0.3, 0.3], // top, right, bottom, left (dalam inci) - memberi margin agar tidak mepet
+    filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, letterRendering: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
+  // Import library secara dinamis saat dibutuhkan
+  const html2pdf = (await import('html2pdf.js')).default;
+  await html2pdf(element, opt);
+};
 
   const fetchAnggota = async (nia: string) => {
     setLoading(true);
