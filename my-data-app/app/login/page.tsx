@@ -28,15 +28,14 @@ export default function LoginPage() {
       });
 
       // Alert setelah response
-      if (error) {
-        alert(`❌ GAGAL: ${error.message}`);
-        setError(error.message);
-        console.error('Login error:', error);
-      } else {
-        alert(`✅ BERHASIL! Redirect ke dashboard...`);
-        console.log('Login success:', data);
-  window.location.href = '/dashboard';
-      }
+if (error) {
+  alert(`❌ GAGAL: ${error.message}`);
+} else {
+  alert(`✅ BERHASIL! Redirect ke dashboard...`);
+  setTimeout(() => {
+    window.location.replace('/dashboard');
+  }, 1000);
+}
     } catch (err: any) {
       alert(`⚠️ ERROR TAK TERDUGA: ${err.message}`);
       setError(err.message);
