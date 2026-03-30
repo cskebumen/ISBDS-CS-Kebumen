@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,10 +11,18 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { role } = useAuth();
 
   const isActive = (path: string) => {
     return pathname === path || pathname?.startsWith(path + '/');
   };
+
+  // Cek apakah role memiliki akses ke menu tertentu
+  const canAccessKeanggotaan = ['admin', 'sekretaris', 'ketua cabang', 'ketua ranting'].includes(role);
+  const canAccessDokumen = ['admin', 'sekretaris', 'bendahara', 'ketua cabang', 'ketua ranting', 'anggota'].includes(role);
+  const canAccessKeuangan = ['admin', 'bendahara', 'ketua cabang'].includes(role);
+  const canAccessKelolaUser = role === 'admin';
+  const canAccessSurat = ['admin', 'sekretaris', 'ketua cabang', 'ketua ranting'].includes(role);
 
   return (
     <>
@@ -43,100 +52,126 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <span>Dashboard</span>
             </Link>
 
+            {/* Kelola User (hanya admin) */}
+            {canAccessKelolaUser && (
+              <Link
+                href="/kelola-user"
+                onClick={onClose}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-4 ${isActive('/kelola-user') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+              >
+                <span className="material-symbols-outlined">group</span>
+                <span>Kelola User</span>
+              </Link>
+            )}
+
             {/* Kategori Keanggotaan */}
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
-              Keanggotaan
-            </div>
-            <Link
-              href="/data-induk"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/data-induk') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">database</span>
-              <span>Data Induk</span>
-            </Link>
-            <Link
-              href="/profil"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/profil') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">person</span>
-              <span>Profil Anggota</span>
-            </Link>
+            {canAccessKeanggotaan && (
+              <>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
+                  Keanggotaan
+                </div>
+                <Link
+                  href="/data-induk"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/data-induk') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">database</span>
+                  <span>Data Induk</span>
+                </Link>
+                <Link
+                  href="/profil"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/profil') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">person</span>
+                  <span>Profil Anggota</span>
+                </Link>
+              </>
+            )}
 
             {/* Kategori Dokumen */}
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
-              Dokumen
-            </div>
-            <Link
-              href="/sertifikat"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/sertifikat') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">card_membership</span>
-              <span>E-Sertifikat</span>
-            </Link>
-            <Link
-              href="/kta"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/kta') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">contact_mail</span>
-              <span>E-KTA</span>
-            </Link>
-            <Link
-              href="/surat"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/surat') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">mail</span>
-              <span>E-Surat</span>
-            </Link>
+            {canAccessDokumen && (
+              <>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
+                  Dokumen
+                </div>
+                <Link
+                  href="/sertifikat"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/sertifikat') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">card_membership</span>
+                  <span>E-Sertifikat</span>
+                </Link>
+                <Link
+                  href="/kta"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/kta') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">contact_mail</span>
+                  <span>E-KTA</span>
+                </Link>
+                {canAccessSurat && (
+                  <Link
+                    href="/surat"
+                    onClick={onClose}
+                    className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/surat') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    <span className="material-symbols-outlined text-base">mail</span>
+                    <span>E-Surat</span>
+                  </Link>
+                )}
+              </>
+            )}
 
             {/* Kategori Keuangan */}
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
-              Keuangan
-            </div>
-            <Link
-              href="/keuangan"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan') && !pathname.includes('/keuangan/transaksi') && !pathname.includes('/keuangan/laporan') && !pathname.includes('/keuangan/master') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">account_balance</span>
-              <span>Dashboard Keuangan</span>
-            </Link>
-            <Link
-              href="/keuangan/transaksi/pemasukan"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/transaksi/pemasukan') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">arrow_downward</span>
-              <span>Pemasukan</span>
-            </Link>
-            <Link
-              href="/keuangan/transaksi/pengeluaran"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/transaksi/pengeluaran') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">arrow_upward</span>
-              <span>Pengeluaran</span>
-            </Link>
-            <Link
-              href="/keuangan/laporan"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/laporan') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">description</span>
-              <span>Laporan Keuangan</span>
-            </Link>
-            <Link
-              href="/keuangan/master"
-              onClick={onClose}
-              className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/master') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
-            >
-              <span className="material-symbols-outlined text-base">settings</span>
-              <span>Master Keuangan</span>
-            </Link>
+            {canAccessKeuangan && (
+              <>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2 px-4">
+                  Keuangan
+                </div>
+                <Link
+                  href="/keuangan"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan') && !pathname.includes('/keuangan/transaksi') && !pathname.includes('/keuangan/laporan') && !pathname.includes('/keuangan/master') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">account_balance</span>
+                  <span>Dashboard Keuangan</span>
+                </Link>
+                <Link
+                  href="/keuangan/transaksi/pemasukan"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/transaksi/pemasukan') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">arrow_downward</span>
+                  <span>Pemasukan</span>
+                </Link>
+                <Link
+                  href="/keuangan/transaksi/pengeluaran"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/transaksi/pengeluaran') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">arrow_upward</span>
+                  <span>Pengeluaran</span>
+                </Link>
+                <Link
+                  href="/keuangan/laporan"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/laporan') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">description</span>
+                  <span>Laporan Keuangan</span>
+                </Link>
+                <Link
+                  href="/keuangan/master"
+                  onClick={onClose}
+                  className={`flex items-center gap-3 pl-10 pr-4 py-2 rounded-lg transition-all ${isActive('/keuangan/master') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span className="material-symbols-outlined text-base">settings</span>
+                  <span>Master Keuangan</span>
+                </Link>
+              </>
+            )}
           </nav>
 
           <div className="px-6 pt-6 border-t border-slate-200 mt-auto">

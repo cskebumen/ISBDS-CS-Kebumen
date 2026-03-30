@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
@@ -30,6 +32,9 @@ type Anggota = {
 };
 
 export default function DataIndukPage() {
+  const { user, role, nia: userNia, ranting: userRanting, loading: authLoading } = useAuth();
+  const router = useRouter();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [anggota, setAnggota] = useState<Anggota[]>([]);
@@ -38,11 +43,11 @@ export default function DataIndukPage() {
   // Modals
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false); // KEMBALI ADA
+  const [showDetailModal, setShowDetailModal] = useState(false);
   
   const [isSaving, setIsSaving] = useState(false);
   const [editingAnggota, setEditingAnggota] = useState<Anggota | null>(null);
-  const [selectedAnggota, setSelectedAnggota] = useState<Anggota | null>(null); // KEMBALI ADA
+  const [selectedAnggota, setSelectedAnggota] = useState<Anggota | null>(null);
 
   // --- States untuk Foto ---
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,11 +62,30 @@ export default function DataIndukPage() {
   const [riwayatFields, setRiwayatFields] = useState<RiwayatSabuk[]>([{ tingkat: '', no_sertifikat: '', tahun: '' }]);
   const [detailRiwayat, setDetailRiwayat] = useState<RiwayatSabuk[]>([]);
 
-  useEffect(() => { fetchAnggota(); }, []);
+  // --- Proteksi Akses Berdasarkan Role ---
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    // Role yang tidak diizinkan: bendahara, anggota
+    if (role === 'bendahara' || role === 'anggota') {
+      router.push('/dashboard');
+      return;
+    }
+    // Selain itu, lanjut fetch data
+    fetchAnggota();
+  }, [authLoading, role, user, userRanting]);
 
   const fetchAnggota = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('anggota').select('*').order('nia', { ascending: true });
+    let query = supabase.from('anggota').select('*').order('nia', { ascending: true });
+    // Jika ketua ranting, filter berdasarkan rantingnya
+    if (role === 'ketua ranting' && userRanting) {
+      query = query.eq('ranting', userRanting);
+    }
+    const { data, error } = await query;
     if (!error && data) setAnggota(data);
     setLoading(false);
   };
@@ -103,7 +127,7 @@ export default function DataIndukPage() {
     }
   };
 
-  // --- Fungsi Detail (KEMBALI ADA) ---
+  // --- Fungsi Detail ---
   const handleOpenDetail = async (item: Anggota) => {
     setSelectedAnggota(item);
     setShowDetailModal(true);
@@ -111,9 +135,9 @@ export default function DataIndukPage() {
     setDetailRiwayat(data || []);
   };
 
-const handleRemoveRiwayat = (index: number) => {
-  setRiwayatFields(prev => prev.filter((_, i) => i !== index));
-};
+  const handleRemoveRiwayat = (index: number) => {
+    setRiwayatFields(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,6 +199,12 @@ const handleRemoveRiwayat = (index: number) => {
     } finally { setIsSaving(false); }
   };
 
+  // Jika belum auth loading, tampilkan loader
+  if (authLoading || loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  // Jika role tidak diizinkan, redirect sudah terjadi di useEffect
   return (
     <div className="flex min-h-screen bg-slate-50 font-poppins text-slate-900">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
@@ -199,7 +229,9 @@ const handleRemoveRiwayat = (index: number) => {
                <button onClick={() => setShowImportModal(true)} className="p-2 bg-slate-600 text-white rounded-xl shadow-md" title="Import Excel"><span className="material-symbols-outlined text-[18px]">upload_file</span></button>
                <button onClick={() => { 
                  setEditingAnggota(null); 
-                 setFormData({nama_lengkap:'', ranting:'', cabang:'Kebumen', jenis_kelamin:'Laki-laki', status_anggota:'Aktif', foto_url:'', alamat_lengkap: ''}); 
+                 // Untuk ketua ranting, set ranting otomatis dari user
+                 const defaultRanting = role === 'ketua ranting' ? userRanting : '';
+                 setFormData({nama_lengkap:'', ranting: defaultRanting, cabang:'Kebumen', jenis_kelamin:'Laki-laki', status_anggota:'Aktif', foto_url:'', alamat_lengkap: ''}); 
                  setRiwayatFields([{tingkat:'', no_sertifikat:'', tahun:''}]);
                  setPhotoPreview(null);
                  setShowTambahModal(true); 
@@ -217,7 +249,7 @@ const handleRemoveRiwayat = (index: number) => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {loading ? (
-                    <tr><td colSpan={2} className="py-10 text-center text-[11px] text-slate-400">Memproses...</td></tr>
+                     <tr><td colSpan={2} className="py-10 text-center text-[11px] text-slate-400">Memproses...</td></tr>
                 ) : anggota.filter(a => a.nama_lengkap?.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
                   <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-3 py-3">
@@ -231,7 +263,6 @@ const handleRemoveRiwayat = (index: number) => {
                     </td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex justify-center items-center gap-2">
-                        {/* TOMBOL DETAIL KEMBALI */}
                         <button onClick={() => handleOpenDetail(item)} className="p-1 text-blue-500 bg-blue-50 rounded-md"><span className="material-symbols-outlined text-[18px]">visibility</span></button>
                         <button onClick={async () => { 
                             setEditingAnggota(item); 
@@ -274,7 +305,7 @@ const handleRemoveRiwayat = (index: number) => {
         </div>
       )}
 
-      {/* --- MODAL DETAIL (KEMBALI ADA) --- */}
+      {/* --- MODAL DETAIL --- */}
       {showDetailModal && selectedAnggota && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4 font-poppins">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
@@ -347,10 +378,16 @@ const handleRemoveRiwayat = (index: number) => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Alamat Lengkap</label>
                   <textarea value={formData.alamat_lengkap} onChange={e => setFormData({...formData, alamat_lengkap: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" rows={2} />
                 </div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Ranting</label><input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" /></div>
-                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor WhatsApp</label><input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none" /></div>
+                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Ranting</label>
+                  {role === 'ketua ranting' ? (
+                    <input value={userRanting || ''} disabled className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-500" />
+                  ) : (
+                    <input required value={formData.ranting} onChange={e => setFormData({...formData, ranting: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none" />
+                  )}
+                </div>
+                <div><label className="text-[10px] font-bold text-slate-400 uppercase">Nomor WhatsApp</label><input value={formData.no_hp} onChange={e => setFormData({...formData, no_hp: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none" /></div>
                 <div><label className="text-[10px] font-bold text-slate-400 uppercase">Status Anggota</label>
-                  <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs outline-none">
+                  <select value={formData.status_anggota} onChange={e => setFormData({...formData, status_anggota: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none">
                     <option value="Aktif">Aktif</option><option value="Istirahat">Istirahat</option><option value="Keluar">Keluar</option>
                   </select>
                 </div>
@@ -361,58 +398,57 @@ const handleRemoveRiwayat = (index: number) => {
                   <h4 className="font-black text-[10px] uppercase tracking-wider flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">military_tech</span> Riwayat Kenaikan Sabuk</h4>
                   <button type="button" onClick={() => setRiwayatFields([...riwayatFields, { tingkat: '', no_sertifikat: '', tahun: '' }])} className="text-[9px] font-bold text-blue-700">+ TAMBAH BARIS</button>
                 </div>
-{riwayatFields.map((field, idx) => (
-  <div key={idx} className="flex gap-2 mb-2 items-center">
-    <select
-      value={field.tingkat}
-      onChange={e => {
-        const u = [...riwayatFields];
-        u[idx].tingkat = e.target.value;
-        setRiwayatFields(u);
-      }}
-      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
-    >
-      <option value="">Pilih Sabuk</option>
-      {['Kuning','Hijau','Biru','Cokelat','Hitam 1','Hitam 2','Hitam 3','Hitam 4','Merah 1','Merah 2','Merah 3','Merah 4'].map(s => (
-        <option key={s} value={s}>{s}</option>
-      ))}
-    </select>
+                {riwayatFields.map((field, idx) => (
+                  <div key={idx} className="flex gap-2 mb-2 items-center">
+                    <select
+                      value={field.tingkat}
+                      onChange={e => {
+                        const u = [...riwayatFields];
+                        u[idx].tingkat = e.target.value;
+                        setRiwayatFields(u);
+                      }}
+                      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+                    >
+                      <option value="">Pilih Sabuk</option>
+                      {['Kuning','Hijau','Biru','Cokelat','Hitam 1','Hitam 2','Hitam 3','Hitam 4','Merah 1','Merah 2','Merah 3','Merah 4'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
 
-    <input
-      placeholder="No. Sertifikat"
-      value={field.no_sertifikat}
-      onChange={e => {
-        const u = [...riwayatFields];
-        u[idx].no_sertifikat = e.target.value;
-        setRiwayatFields(u);
-      }}
-      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
-    />
+                    <input
+                      placeholder="No. Sertifikat"
+                      value={field.no_sertifikat}
+                      onChange={e => {
+                        const u = [...riwayatFields];
+                        u[idx].no_sertifikat = e.target.value;
+                        setRiwayatFields(u);
+                      }}
+                      className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+                    />
 
-    <input
-      placeholder="Tahun"
-      value={field.tahun}
-      onChange={e => {
-        const u = [...riwayatFields];
-        u[idx].tahun = e.target.value;
-        setRiwayatFields(u);
-      }}
-      className="w-16 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
-    />
+                    <input
+                      placeholder="Tahun"
+                      value={field.tahun}
+                      onChange={e => {
+                        const u = [...riwayatFields];
+                        u[idx].tahun = e.target.value;
+                        setRiwayatFields(u);
+                      }}
+                      className="w-16 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[10px]"
+                    />
 
-    {/* Tombol hapus - hanya tampil jika lebih dari 1 baris */}
-    {riwayatFields.length > 1 && (
-      <button
-        type="button"
-        onClick={() => handleRemoveRiwayat(idx)}
-        className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-        title="Hapus baris"
-      >
-        <span className="material-symbols-outlined text-[18px]">delete</span>
-      </button>
-    )}
-  </div>
-))}
+                    {riwayatFields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRiwayat(idx)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        title="Hapus baris"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
 
               <button type="submit" disabled={isSaving} className="w-full py-4 bg-blue-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">
