@@ -146,7 +146,7 @@ export default function ProfilAnggotaPage() {
             {/* Search Bar */}
             <div className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100 flex items-center mb-10 group focus-within:border-blue-200 transition-all">
               <div className="flex-1 flex items-center px-6">
-                <Search className="text-slate-300 mr-4" size={22} />
+                <Search className="text-slate-300 mr-4" size={15} />
                 <input
                   type="text"
                   value={searchNia}
