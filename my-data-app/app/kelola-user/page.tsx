@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
@@ -22,6 +23,7 @@ type Anggota = {
 };
 
 export default function KelolaUserPage() {
+  const router = useRouter();
   const { role: currentRole, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
@@ -35,23 +37,28 @@ export default function KelolaUserPage() {
   const [selectedAnggota, setSelectedAnggota] = useState<Anggota | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Proteksi: jika bukan admin, redirect ke dashboard
   useEffect(() => {
     if (!authLoading && currentRole !== 'admin') {
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     }
-  }, [authLoading, currentRole]);
+  }, [authLoading, currentRole, router]);
 
   useEffect(() => {
-    fetchUsers();
-    fetchAnggotaList();
-  }, []);
+    if (currentRole === 'admin') {
+      fetchUsers();
+      fetchAnggotaList();
+    }
+  }, [currentRole]);
 
   const fetchUsers = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('user_profil')
       .select('id, email, nama_lengkap, nia, role')
       .order('created_at', { ascending: false });
     if (!error && data) setUsers(data);
+    else console.error('Error fetching users:', error);
     setLoading(false);
   };
 
@@ -61,6 +68,7 @@ export default function KelolaUserPage() {
       .select('id, nia, nama_lengkap')
       .order('nia', { ascending: true });
     if (!error && data) setAnggotaList(data);
+    else console.error('Error fetching anggota:', error);
   };
 
   const handleNiaChange = (nia: string) => {
@@ -83,7 +91,6 @@ export default function KelolaUserPage() {
     const password = 'CSKebumen1996';
     const namaLengkap = selectedAnggota?.nama_lengkap || formData.email.split('@')[0];
 
-    // Buat user di auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: formData.email,
       password,
@@ -100,7 +107,6 @@ export default function KelolaUserPage() {
       return;
     }
 
-    // user_profil akan otomatis terisi oleh trigger
     alert('User berhasil dibuat. Password default: CSKebumen1996');
     fetchUsers();
     setShowForm(false);
@@ -115,8 +121,15 @@ export default function KelolaUserPage() {
     else fetchUsers();
   };
 
-  if (authLoading || loading) return <div>Loading...</div>;
-  if (currentRole !== 'admin') return null;
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-surface">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (currentRole !== 'admin') return null; // tidak akan pernah sampai sini karena redirect sudah terjadi
 
   return (
     <div className="flex min-h-screen bg-surface">
