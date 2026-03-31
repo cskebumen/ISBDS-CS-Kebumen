@@ -1,15 +1,12 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
 
-// Dynamic import untuk menghindari error "self is not defined"
-const html2pdf = dynamic(() => import('html2pdf.js'), { ssr: false });
 
 // Mapping sabuk ke jabatan
 const jabatanMap: Record<string, string> = {
@@ -73,9 +70,9 @@ const handleDownloadPDF = async () => {
   const opt = {
     margin: 0,
     filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: { scale: 2, letterRendering: true, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
   };
   const html2pdf = (await import('html2pdf.js')).default;
   await html2pdf(element, opt);

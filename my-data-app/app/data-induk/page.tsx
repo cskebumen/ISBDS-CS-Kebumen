@@ -230,7 +230,7 @@ export default function DataIndukPage() {
                <button onClick={() => { 
                  setEditingAnggota(null); 
                  // Untuk ketua ranting, set ranting otomatis dari user
-                 const defaultRanting = role === 'ketua ranting' ? userRanting : '';
+ const defaultRanting = role === 'ketua ranting' ? (userRanting || '') : '';
                  setFormData({nama_lengkap:'', ranting: defaultRanting, cabang:'Kebumen', jenis_kelamin:'Laki-laki', status_anggota:'Aktif', foto_url:'', alamat_lengkap: ''}); 
                  setRiwayatFields([{tingkat:'', no_sertifikat:'', tahun:''}]);
                  setPhotoPreview(null);
@@ -269,7 +269,7 @@ export default function DataIndukPage() {
                             setFormData(item); 
                             setPhotoPreview(item.foto_url || null);
                             const { data } = await supabase.from('riwayat_sabuk').select('*').eq('anggota_id', item.id); 
-                            setRiwayatFields(data && data.length > 0 ? data : [{ tingkat: '', no_sertifikat: '', tahun: '' }]); 
+                             setRiwayatFields(data && data.length > 0 ? data : [{ tingkat: '', no_sertifikat: '', tahun: '' }]); 
                             setShowTambahModal(true); 
                         }} className="p-1 text-amber-500 bg-amber-50 rounded-md"><span className="material-symbols-outlined text-[18px]">edit</span></button>
                         <button onClick={async () => { if(confirm('Hapus permanent?')) { await supabase.from('riwayat_sabuk').delete().eq('anggota_id', item.id); await supabase.from('anggota').delete().eq('id', item.id); fetchAnggota(); } }} className="p-1 text-red-500 bg-red-50 rounded-md"><span className="material-symbols-outlined text-[18px]">delete</span></button>
