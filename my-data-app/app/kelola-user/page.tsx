@@ -91,27 +91,35 @@ export default function KelolaUserPage() {
     const password = 'CSKebumen1996';
     const namaLengkap = selectedAnggota?.nama_lengkap || formData.email.split('@')[0];
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: formData.email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        nama_lengkap: namaLengkap,
-        nia: formData.nia || null,
-        role: formData.role,
-      },
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          nama_lengkap: namaLengkap,
+          nia: formData.nia || null,
+          role: formData.role,
+        },
+      });
 
-    if (authError) {
-      alert('Gagal membuat user: ' + authError.message);
-      return;
+      if (authError) {
+        if (authError.message.includes('not allowed') || authError.status === 403) {
+          alert('⚠️ Operasi ini memerlukan Service Role Key.\n\nPastikan environment variable SUPABASE_SERVICE_ROLE_KEY sudah diatur di Vercel.\n\nCara: Masuk ke Vercel Dashboard → Project Settings → Environment Variables → tambahkan SUPABASE_SERVICE_ROLE_KEY dengan nilai dari Supabase Dashboard (Settings → API → service_role key).');
+        } else {
+          alert('Gagal membuat user: ' + authError.message);
+        }
+        return;
+      }
+
+      alert('User berhasil dibuat. Password default: CSKebumen1996');
+      fetchUsers();
+      setShowForm(false);
+      setFormData({ nia: '', role: 'anggota', email: '' });
+      setSelectedAnggota(null);
+    } catch (err: any) {
+      alert('Kesalahan tak terduga: ' + err.message);
     }
-
-    alert('User berhasil dibuat. Password default: CSKebumen1996');
-    fetchUsers();
-    setShowForm(false);
-    setFormData({ nia: '', role: 'anggota', email: '' });
-    setSelectedAnggota(null);
   };
 
   const handleDeleteUser = async (userId: string) => {
@@ -157,7 +165,7 @@ export default function KelolaUserPage() {
           </div>
         </header>
 
-        <div className="pt-24 px-4 md:px-8 pb-12 flex-1 w-full max-w-full overflow-hidden">
+        <div className="pt-24 px-4 md:px-8 pb-12 flex-1 w-full max-w-full overflow-x-hidden">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-extrabold text-primary tracking-tight">Kelola User</h1>
@@ -172,9 +180,9 @@ export default function KelolaUserPage() {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-[600px] w-full text-left">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+            <div className="min-w-[600px]">
+              <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b">
                   <tr>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Email</th>
