@@ -1,22 +1,47 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, Search, ShieldCheck, Edit3, History, Hash, Phone, MapPin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
 import { CetakProfil } from '@/components/CetakProfil';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfilAnggotaPage() {
+  const { user, role, nia: userNia, ranting: userRanting, loading: authLoading } = useAuth();
+  const router = useRouter();
+
   const componentRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<any>(null);
   const [riwayat, setRiwayat] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchNia, setSearchNia] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Redirect jika belum login
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
+
+  // Untuk bendahara & anggota: langsung tampilkan profil sendiri
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+    if (role === 'bendahara' || role === 'anggota') {
+      if (userNia) {
+        fetchProfilData(userNia, true); // force true untuk bypass filter ranting
+      } else {
+        alert('Profil Anda belum terkait dengan NIA. Hubungi admin.');
+      }
+    }
+  }, [authLoading, user, role, userNia]);
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
@@ -36,7 +61,7 @@ export default function ProfilAnggotaPage() {
     `,
   });
 
-  const fetchProfilData = async (targetNia: string) => {
+  const fetchProfilData = async (targetNia: string, forceBypassFilter = false) => {
     const nia = targetNia.trim();
     if (!nia) return;
     setLoading(true);
@@ -47,6 +72,15 @@ export default function ProfilAnggotaPage() {
         .eq('nia', nia)
         .single();
       if (error) throw error;
+
+      // Proteksi untuk ketua ranting: hanya boleh melihat anggota rantingnya sendiri
+      if (!forceBypassFilter && role === 'ketua ranting' && anggota.ranting !== userRanting) {
+        alert('Anda tidak memiliki akses ke profil anggota ranting lain.');
+        setData(null);
+        setRiwayat([]);
+        return;
+      }
+
       const { data: sabuk } = await supabase
         .from('riwayat_sabuk')
         .select('*')
@@ -62,6 +96,13 @@ export default function ProfilAnggotaPage() {
       setLoading(false);
     }
   };
+
+  // Render search bar hanya untuk role yang diizinkan mencari (bukan bendahara/anggota)
+  const canSearch = role !== 'bendahara' && role !== 'anggota';
+
+  if (authLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <>
@@ -93,7 +134,11 @@ export default function ProfilAnggotaPage() {
           <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight">Profil Anggota</h1>
-              <p className="text-sm text-tertiary font-medium">Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati</p>
+              <p className="text-sm text-tertiary font-medium">
+                {role === 'bendahara' || role === 'anggota'
+                  ? 'Informasi profil Anda'
+                  : 'Manajemen Data Personal Anggota dan riwayat sertifikasi anggota ISBDS Cipta Sejati'}
+              </p>
             </div>
 
             {data && (
@@ -111,28 +156,33 @@ export default function ProfilAnggotaPage() {
               </div>
             )}
 
-            <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 flex items-center mb-8 group focus-within:border-blue-200 transition-all">
-              <div className="flex-1 flex items-center px-4">
-                <Search className="text-slate-300 mr-2" size={14} />
-                <input
-                  type="text"
-                  value={searchNia}
-                  onChange={(e) => setSearchNia(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') fetchProfilData(searchNia); }}
-                  placeholder="Cari NIA (Contoh: 03.06.02.000042)"
-                  className="w-full py-2 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 placeholder:text-slate-300 outline-none"
-                />
+            {/* Search Bar hanya untuk role yang memiliki hak pencarian */}
+            {canSearch && (
+              <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 flex items-center mb-8 group focus-within:border-blue-200 transition-all">
+                <div className="flex-1 flex items-center px-4">
+                  <Search className="text-slate-300 mr-2" size={14} />
+                  <input
+                    type="text"
+                    value={searchNia}
+                    onChange={(e) => setSearchNia(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') fetchProfilData(searchNia); }}
+                    placeholder="Cari NIA (Contoh: 03.06.02.000042)"
+                    className="w-full py-2 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 placeholder:text-slate-300 outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => fetchProfilData(searchNia)}
+                  className="px-5 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-xs"
+                >
+                  {loading ? '...' : 'CARI'}
+                </button>
               </div>
-              <button
-                onClick={() => fetchProfilData(searchNia)}
-                className="px-5 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-xs"
-              >
-                {loading ? '...' : 'CARI'}
-              </button>
-            </div>
+            )}
 
+            {/* Tampilan data */}
             {data ? (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* ... (sisa JSX tidak berubah) ... */}
                 <div className="lg:col-span-4 xl:col-span-3">
                   <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="aspect-[3/4] rounded-xl bg-slate-50 overflow-hidden border-2 border-white shadow">
@@ -213,7 +263,9 @@ export default function ProfilAnggotaPage() {
             ) : (
               <div className="py-16 text-center bg-white rounded-2xl border-2 border-dashed border-slate-100">
                 <ShieldCheck size={48} className="mx-auto text-slate-100 mb-3" />
-                <p className="font-bold text-slate-300 uppercase tracking-widest text-sm">Data belum dimuat</p>
+                <p className="font-bold text-slate-300 uppercase tracking-widest text-sm">
+                  {loading ? 'Memuat data...' : (role === 'bendahara' || role === 'anggota') ? 'Profil Anda belum tersedia' : 'Data belum dimuat'}
+                </p>
               </div>
             )}
           </div>

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
 import ProfilePopup from '@/components/ProfilePopup';
-
 
 // Mapping sabuk ke jabatan
 const jabatanMap: Record<string, string> = {
@@ -47,14 +47,25 @@ type Anggota = {
   tanggal_lahir: string;
   foto_url?: string;
   cabang: string;
+  ranting: string;
+};
+
+type RiwayatSabuk = {
+  id: string;
+  tingkat: string;
+  no_sertifikat: string;
+  tahun: number;
 };
 
 export default function SertifikatPage() {
+  const { user, role, nia: userNia, ranting: userRanting, loading: authLoading } = useAuth();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchNia, setSearchNia] = useState('');
   const [anggota, setAnggota] = useState<Anggota | null>(null);
   const [riwayatSertifikat, setRiwayatSertifikat] = useState<Sertifikat[]>([]);
+  const [riwayatSabuk, setRiwayatSabuk] = useState<RiwayatSabuk[]>([]);
   const [selectedBelt, setSelectedBelt] = useState(beltOptions[0]);
   const [tanggalKenaikan, setTanggalKenaikan] = useState(new Date().toISOString().slice(0, 10));
   const [generatedSertifikat, setGeneratedSertifikat] = useState<Sertifikat | null>(null);
@@ -64,40 +75,78 @@ export default function SertifikatPage() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
-const handleDownloadPDF = async () => {
-  if (!contentRef.current) return;
-  const element = contentRef.current;
-  const opt = {
-    margin: 0,
-    filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
-    image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2, letterRendering: true, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-  };
-  const html2pdf = (await import('html2pdf.js')).default;
-  await html2pdf(element, opt);
-};
+  // For bendahara & anggota: load their own profile automatically
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+    if (role === 'bendahara' || role === 'anggota') {
+      if (userNia) {
+        fetchAnggota(userNia, true); // force load without search
+      } else {
+        alert('Profil Anda belum terkait dengan NIA. Hubungi admin.');
+      }
+    }
+  }, [authLoading, user, role, userNia]);
 
-  const fetchAnggota = async (nia: string) => {
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current) return;
+    const element = contentRef.current;
+    const opt = {
+      margin: 0,
+      filename: `Sertifikat_${anggota?.nama_lengkap || 'Anggota'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+    };
+    const html2pdf = (await import('html2pdf.js')).default;
+    await html2pdf(element, opt);
+  };
+
+  const fetchAnggota = async (nia: string, force = false) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: anggotaData, error } = await supabase
         .from('anggota')
         .select('*')
         .eq('nia', nia)
         .single();
       if (error) throw error;
-      setAnggota(data);
-      const { data: sertifikatData } = await supabase
-        .from('sertifikat')
+
+      // Role-based restriction for Ketua Ranting
+      if (!force && role === 'ketua ranting' && anggotaData.ranting !== userRanting) {
+        alert('Anda tidak memiliki akses ke anggota ranting lain.');
+        setAnggota(null);
+        setRiwayatSertifikat([]);
+        setRiwayatSabuk([]);
+        return;
+      }
+
+      setAnggota(anggotaData);
+
+      // Fetch riwayat sabuk from riwayat_sabuk (for bendahara/anggota view)
+      const { data: sabukData } = await supabase
+        .from('riwayat_sabuk')
         .select('*')
-        .eq('anggota_id', data.id)
-        .order('tanggal_kenaikan', { ascending: false });
-      setRiwayatSertifikat(sertifikatData || []);
+        .eq('anggota_id', anggotaData.id)
+        .order('tahun', { ascending: true });
+      setRiwayatSabuk(sabukData || []);
+
+      // For admin/sekretaris/ketua cabang, also fetch existing sertifikat (for the table)
+      if (role === 'admin' || role === 'sekretaris' || role === 'ketua cabang' || role === 'ketua ranting') {
+        const { data: sertifikatData } = await supabase
+          .from('sertifikat')
+          .select('*')
+          .eq('anggota_id', anggotaData.id)
+          .order('tanggal_kenaikan', { ascending: false });
+        setRiwayatSertifikat(sertifikatData || []);
+      } else {
+        setRiwayatSertifikat([]);
+      }
     } catch (error) {
       alert('NIA tidak ditemukan');
       setAnggota(null);
       setRiwayatSertifikat([]);
+      setRiwayatSabuk([]);
     } finally {
       setLoading(false);
     }
@@ -126,6 +175,11 @@ const handleDownloadPDF = async () => {
   const handleGenerate = async () => {
     if (!anggota) {
       alert('Silakan cari anggota terlebih dahulu');
+      return;
+    }
+    // Only allowed for roles that can generate (admin, sekretaris, ketua cabang, ketua ranting)
+    if (!['admin', 'sekretaris', 'ketua cabang', 'ketua ranting'].includes(role)) {
+      alert('Anda tidak memiliki izin untuk membuat sertifikat baru.');
       return;
     }
     setIsGenerating(true);
@@ -174,12 +228,19 @@ const handleDownloadPDF = async () => {
         alert(`Riwayat sabuk ${selectedBelt} berhasil ditambahkan`);
       }
 
+      // Refresh data
       const { data: riwayatBaru } = await supabase
         .from('sertifikat')
         .select('*')
         .eq('anggota_id', anggota.id)
         .order('tanggal_kenaikan', { ascending: false });
       setRiwayatSertifikat(riwayatBaru || []);
+      const { data: sabukBaru } = await supabase
+        .from('riwayat_sabuk')
+        .select('*')
+        .eq('anggota_id', anggota.id)
+        .order('tahun', { ascending: true });
+      setRiwayatSabuk(sabukBaru || []);
     } catch (error: any) {
       alert('Gagal menyimpan: ' + error.message);
     } finally {
@@ -216,6 +277,14 @@ const handleDownloadPDF = async () => {
           });
         alert(`Riwayat sabuk ${sertifikat.tingkat} berhasil ditambahkan`);
       }
+
+      // Refresh data
+      const { data: sabukBaru } = await supabase
+        .from('riwayat_sabuk')
+        .select('*')
+        .eq('anggota_id', anggota.id)
+        .order('tahun', { ascending: true });
+      setRiwayatSabuk(sabukBaru || []);
     } catch (error: any) {
       alert('Gagal menyimpan riwayat: ' + error.message);
     } finally {
@@ -231,6 +300,18 @@ const handleDownloadPDF = async () => {
   const qrData = generatedSertifikat && anggota
     ? `${anggota.nia}|${generatedSertifikat.tingkat}|${generatedSertifikat.no_sertifikat}`
     : '';
+
+  // Determine if user can search (admin, sekretaris, ketua cabang, ketua ranting)
+  const canSearch = ['admin', 'sekretaris', 'ketua cabang', 'ketua ranting'].includes(role);
+  // Determine if user can generate new certificates (same as search)
+  const canGenerate = canSearch;
+
+  // For bendahara/anggota, we display riwayat sabuk instead of sertifikat
+  const showRiwayatSabuk = role === 'bendahara' || role === 'anggota';
+
+  if (authLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <div className="flex min-h-screen bg-surface">
@@ -261,7 +342,11 @@ const handleDownloadPDF = async () => {
         <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold text-primary tracking-tight">E-Sertifikat</h1>
-            <p className="text-tertiary font-medium mt-1">Sistem otomasi pembuatan sertifikat kenaikan tingkat anggota</p>
+            <p className="text-tertiary font-medium mt-1">
+              {role === 'bendahara' || role === 'anggota'
+                ? 'Unduh sertifikat kenaikan tingkat Anda'
+                : 'Sistem otomasi pembuatan sertifikat kenaikan tingkat anggota'}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -273,27 +358,29 @@ const handleDownloadPDF = async () => {
                   Data Sertifikat
                 </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Cari Berdasarkan NIA
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={searchNia}
-                        onChange={(e) => setSearchNia(e.target.value)}
-                        placeholder="Contoh: 03.06.02.000001"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
-                      />
-                      <button
-                        onClick={() => fetchAnggota(searchNia)}
-                        disabled={loading}
-                        className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all"
-                      >
-                        Cari
-                      </button>
+                  {canSearch && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Cari Berdasarkan NIA
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={searchNia}
+                          onChange={(e) => setSearchNia(e.target.value)}
+                          placeholder="Contoh: 03.06.02.000001"
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                        />
+                        <button
+                          onClick={() => fetchAnggota(searchNia)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all"
+                        >
+                          Cari
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {anggota && (
                     <>
@@ -305,47 +392,52 @@ const handleDownloadPDF = async () => {
                           {anggota.nama_lengkap}
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          Tingkat Sabuk
-                        </label>
-                        <select
-                          value={selectedBelt}
-                          onChange={(e) => setSelectedBelt(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"
-                        >
-                          {beltOptions.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          Tanggal Kenaikan
-                        </label>
-                        <input
-                          type="date"
-                          value={tanggalKenaikan}
-                          onChange={(e) => setTanggalKenaikan(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          Nomor Sertifikat (Otomatis)
-                        </label>
-                        <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl px-4 py-2 text-sm font-mono text-primary">
-                          {generatedSertifikat?.no_sertifikat || 'Akan di-generate'}
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className="w-full py-3 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-lg">auto_awesome</span>
-                        {isGenerating ? 'Memproses...' : 'Generate & Simpan Riwayat'}
-                      </button>
+
+                      {canGenerate && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                              Tingkat Sabuk
+                            </label>
+                            <select
+                              value={selectedBelt}
+                              onChange={(e) => setSelectedBelt(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"
+                            >
+                              {beltOptions.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                              Tanggal Kenaikan
+                            </label>
+                            <input
+                              type="date"
+                              value={tanggalKenaikan}
+                              onChange={(e) => setTanggalKenaikan(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                              Nomor Sertifikat (Otomatis)
+                            </label>
+                            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl px-4 py-2 text-sm font-mono text-primary">
+                              {generatedSertifikat?.no_sertifikat || 'Akan di-generate'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            className="w-full py-3 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-xl font-bold shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                          >
+                            <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                            {isGenerating ? 'Memproses...' : 'Generate & Simpan Riwayat'}
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -356,7 +448,9 @@ const handleDownloadPDF = async () => {
                   <div>
                     <p className="text-xs font-bold text-blue-800 uppercase">Panduan Cepat</p>
                     <p className="text-[11px] text-blue-700/80 leading-relaxed">
-                      Sertifikat yang di-generate akan otomatis menyimpan/memperbarui riwayat sabuk anggota.
+                      {canGenerate
+                        ? 'Sertifikat yang di-generate akan otomatis menyimpan/memperbarui riwayat sabuk anggota.'
+                        : 'Anda dapat mengunduh sertifikat dari riwayat sabuk yang sudah ada.'}
                     </p>
                   </div>
                 </div>
@@ -404,7 +498,6 @@ const handleDownloadPDF = async () => {
                   <div
                     style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                   >
-                    {/* Konten sertifikat dengan padding untuk margin PDF */}
                     <div ref={contentRef} style={{ width: '210mm', margin: '0 auto', backgroundColor: 'white' }}>
                       {generatedSertifikat && anggota ? (
                         <div className="bg-white" style={{ padding: '10mm 12mm', fontFamily: 'Inter, sans-serif' }}>
@@ -497,59 +590,101 @@ const handleDownloadPDF = async () => {
                 </div>
               </div>
 
-              {/* Riwayat Sertifikat */}
+              {/* Riwayat Sertifikat untuk role yang bisa generate, atau Riwayat Sabuk untuk bendahara/anggota */}
               {anggota && (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                   <div className="p-4 border-b border-slate-100">
                     <h4 className="font-bold text-primary flex items-center gap-2">
                       <span className="material-symbols-outlined">history</span>
-                      Riwayat Sertifikat
+                      {showRiwayatSabuk ? 'Riwayat Sabuk' : 'Riwayat Sertifikat'}
                     </h4>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
                         <tr>
+                          <th className="px-4 py-3">No.</th>
+                          <th className="px-4 py-3">Tingkat Sabuk</th>
                           <th className="px-4 py-3">No. Sertifikat</th>
-                          <th className="px-4 py-3">Sabuk</th>
-                          <th className="px-4 py-3">Tanggal Kenaikan</th>
+                          <th className="px-4 py-3">Tahun</th>
                           <th className="px-4 py-3 text-center">Aksi</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {riwayatSertifikat.length === 0 ? (
-                          <tr><td colSpan={4} className="text-center py-8 text-slate-400">Belum ada data sertifikat</td></tr>
-                        ) : (
-                          riwayatSertifikat.map(s => (
-                            <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
-                              <td className="px-4 py-3 text-sm font-mono">{s.no_sertifikat}</td>
-                              <td className="px-4 py-3 text-sm">{s.tingkat}</td>
-                              <td className="px-4 py-3 text-sm">{formatTanggalIndo(s.tanggal_kenaikan)}</td>
-                              <td className="px-4 py-3 text-center">
-                                <div className="flex justify-center gap-2">
+                        {showRiwayatSabuk ? (
+                          riwayatSabuk.length === 0 ? (
+                            <tr><td colSpan={5} className="text-center py-8 text-slate-400">Belum ada riwayat sabuk</td></tr>
+                          ) : (
+                            riwayatSabuk.map((r, idx) => (
+                              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-sm">{idx + 1}</td>
+                                <td className="px-4 py-3 text-sm font-semibold">{r.tingkat}</td>
+                                <td className="px-4 py-3 text-sm font-mono">{r.no_sertifikat || '-'}</td>
+                                <td className="px-4 py-3 text-sm">{r.tahun}</td>
+                                <td className="px-4 py-3 text-center">
                                   <button
-                                    onClick={() => {
-                                      setGeneratedSertifikat(s);
-                                      setSelectedBelt(s.tingkat);
-                                      setTanggalKenaikan(s.tanggal_kenaikan);
+                                    onClick={async () => {
+                                      // For bendahara/anggota, generate a certificate from this riwayat sabuk
+                                      // Create a temporary generatedSertifikat object for preview and PDF
+                                      const tempSertifikat: Sertifikat = {
+                                        id: r.id,
+                                        no_sertifikat: r.no_sertifikat,
+                                        tingkat: r.tingkat,
+                                        tanggal_kenaikan: `${r.tahun}-01-01`, // approximate; we need actual date
+                                        anggota_id: anggota.id,
+                                        created_at: new Date().toISOString(),
+                                      };
+                                      setGeneratedSertifikat(tempSertifikat);
+                                      // Optionally set selectedBelt and tanggalKenaikan
+                                      setSelectedBelt(r.tingkat);
+                                      setTanggalKenaikan(`${r.tahun}-01-01`);
                                     }}
                                     className="text-blue-600 hover:bg-blue-50 p-1 rounded"
-                                    title="Tampilkan"
+                                    title="Lihat Sertifikat"
                                   >
                                     <span className="material-symbols-outlined text-sm">visibility</span>
                                   </button>
-                                  <button
-                                    onClick={() => handleUpdateRiwayatFromSertifikat(s)}
-                                    disabled={isSaving}
-                                    className="text-green-600 hover:bg-green-50 p-1 rounded"
-                                    title="Update riwayat sabuk"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">save</span>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
+                                </td>
+                              </tr>
+                            ))
+                          )
+                        ) : (
+                          // For roles that can generate, show riwayatSertifikat
+                          riwayatSertifikat.length === 0 ? (
+                            <tr><td colSpan={5} className="text-center py-8 text-slate-400">Belum ada data sertifikat</td></tr>
+                          ) : (
+                            riwayatSertifikat.map(s => (
+                              <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
+                                <td className="px-4 py-3 text-sm font-mono">{s.no_sertifikat}</td>
+                                <td className="px-4 py-3 text-sm">{s.tingkat}</td>
+                                <td className="px-4 py-3 text-sm">{formatTanggalIndo(s.tanggal_kenaikan)}</td>
+                                <td className="px-4 py-3 text-sm">{new Date(s.tanggal_kenaikan).getFullYear()}</td>
+                                <td className="px-4 py-3 text-center">
+                                  <div className="flex justify-center gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setGeneratedSertifikat(s);
+                                        setSelectedBelt(s.tingkat);
+                                        setTanggalKenaikan(s.tanggal_kenaikan);
+                                      }}
+                                      className="text-blue-600 hover:bg-blue-50 p-1 rounded"
+                                      title="Tampilkan"
+                                    >
+                                      <span className="material-symbols-outlined text-sm">visibility</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleUpdateRiwayatFromSertifikat(s)}
+                                      disabled={isSaving}
+                                      className="text-green-600 hover:bg-green-50 p-1 rounded"
+                                      title="Update riwayat sabuk"
+                                    >
+                                      <span className="material-symbols-outlined text-sm">save</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )
                         )}
                       </tbody>
                     </table>
