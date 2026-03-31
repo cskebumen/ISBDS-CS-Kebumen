@@ -44,12 +44,12 @@ export default function KelolaUserPage() {
     }
   }, [authLoading, currentRole, router]);
 
-useEffect(() => {
-  if (!authLoading && currentRole !== 'admin') {
-    alert(`Role saat ini: ${currentRole}. Redirect ke dashboard.`);
-    router.push('/dashboard');
-  }
-}, [authLoading, currentRole, router]);
+  useEffect(() => {
+    if (currentRole === 'admin') {
+      fetchUsers();
+      fetchAnggotaList();
+    }
+  }, [currentRole]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -129,7 +129,7 @@ useEffect(() => {
     );
   }
 
-  if (currentRole !== 'admin') return null; // tidak akan pernah sampai sini karena redirect sudah terjadi
+  if (currentRole !== 'admin') return null;
 
   return (
     <div className="flex min-h-screen bg-surface">
@@ -157,8 +157,8 @@ useEffect(() => {
           </div>
         </header>
 
-        <div className="pt-24 px-4 md:px-8 pb-12 flex-1">
-          <div className="flex justify-between items-center mb-8">
+        <div className="pt-24 px-4 md:px-8 pb-12 flex-1 w-full max-w-full overflow-hidden">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-extrabold text-primary tracking-tight">Kelola User</h1>
               <p className="text-tertiary font-medium mt-1">Tambah, edit, dan hapus user yang dapat mengakses sistem</p>
@@ -174,7 +174,7 @@ useEffect(() => {
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="min-w-[600px] w-full text-left">
                 <thead className="bg-slate-50 border-b">
                   <tr>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Email</th>
@@ -187,7 +187,7 @@ useEffect(() => {
                 <tbody>
                   {users.map(user => (
                     <tr key={user.id} className="border-b hover:bg-slate-50">
-                      <td className="px-6 py-4 text-sm">{user.email}</td>
+                      <td className="px-6 py-4 text-sm break-words">{user.email}</td>
                       <td className="px-6 py-4 text-sm">{user.nama_lengkap || '-'}</td>
                       <td className="px-6 py-4 text-sm font-mono">{user.nia || '-'}</td>
                       <td className="px-6 py-4 text-sm capitalize">{user.role}</td>
@@ -213,7 +213,7 @@ useEffect(() => {
       {/* Modal Tambah User */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-primary mb-4">Tambah User Baru</h2>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
