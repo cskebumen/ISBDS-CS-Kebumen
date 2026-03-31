@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
-import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
+import dynamic from 'next/dynamic'
+
+const AuthProvider = dynamic(() => import('@/contexts/AuthContext').then(mod => mod.AuthProvider), {
+  ssr: false,
+})
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
