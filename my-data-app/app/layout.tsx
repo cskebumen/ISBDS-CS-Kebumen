@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
-import dynamic from 'next/dynamic'
-
-// Dynamic import AuthProvider agar tidak dieksekusi saat build
-const AuthProvider = dynamic(
-  () => import('@/contexts/AuthContext').then(mod => mod.AuthProvider),
-  { ssr: false }
-)
+import AuthWrapper from "@/components/AuthWrapper"; // ← import komponen klien
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -31,7 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${manrope.variable} font-body bg-surface text-on-surface`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthWrapper>{children}</AuthWrapper>
       </body>
     </html>
   );
