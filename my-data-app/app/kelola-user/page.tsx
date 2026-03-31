@@ -44,12 +44,12 @@ export default function KelolaUserPage() {
     }
   }, [authLoading, currentRole, router]);
 
-  useEffect(() => {
-    if (currentRole === 'admin') {
-      fetchUsers();
-      fetchAnggotaList();
-    }
-  }, [currentRole]);
+useEffect(() => {
+  if (!authLoading && currentRole !== 'admin') {
+    alert(`Role saat ini: ${currentRole}. Redirect ke dashboard.`);
+    router.push('/dashboard');
+  }
+}, [authLoading, currentRole, router]);
 
   const fetchUsers = async () => {
     setLoading(true);
