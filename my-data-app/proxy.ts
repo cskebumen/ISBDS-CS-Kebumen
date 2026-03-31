@@ -82,9 +82,9 @@ export async function proxy(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname
 
-  if (pathname.startsWith('/kelola-user') && userRole !== 'admin') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
+//  if (pathname.startsWith('/kelola-user') && userRole !== 'admin') {
+//    return NextResponse.redirect(new URL('/dashboard', req.url))
+//  }
 
   if (pathname.startsWith('/keuangan') && !['admin', 'bendahara', 'ketua cabang'].includes(userRole)) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
