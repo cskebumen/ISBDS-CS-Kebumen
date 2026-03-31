@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function proxy(req: NextRequest) {
+  // Pastikan environment variables tersedia
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables')
+    // Jika environment tidak lengkap, lewati middleware dan izinkan akses
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: req.headers,
@@ -10,8 +20,8 @@ export async function proxy(req: NextRequest) {
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
@@ -35,16 +45,13 @@ export async function proxy(req: NextRequest) {
     }
   )
 
-  // Refresh session (penting agar cookie terbaru terbaca)
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Jika tidak ada session dan bukan halaman login, redirect ke login
   if (!session && !req.nextUrl.pathname.startsWith('/login')) {
     const redirectUrl = new URL('/login', req.url)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Ambil role, nia, ranting dari user_profil (jika session ada)
   let userRole = 'anggota'
   let userNia = null
   let userRanting = null
@@ -62,7 +69,6 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // Simpan ke header untuk digunakan di server components (opsional)
   const requestHeaders = new Headers(req.headers)
   requestHeaders.set('x-user-role', userRole)
   requestHeaders.set('x-user-nia', userNia || '')
@@ -74,7 +80,6 @@ export async function proxy(req: NextRequest) {
     },
   })
 
-  // Proteksi rute berdasarkan role
   const pathname = req.nextUrl.pathname
 
   if (pathname.startsWith('/kelola-user') && userRole !== 'admin') {
